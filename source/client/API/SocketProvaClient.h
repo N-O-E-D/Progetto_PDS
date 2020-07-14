@@ -6,13 +6,11 @@
 #define PROGETTO_PDS_SOCKETPROVA_H
 
 
-class SocketProva {
+class SocketProvaClient {
 int brunoProva;
 int lorenzo;
 public:
-    void printInfo(){
-        std::cout<<"brunoProva!"<<std::endl;
-    }
+    void printInfo();
 };
 
 
