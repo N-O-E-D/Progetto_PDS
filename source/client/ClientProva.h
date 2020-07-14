@@ -2,8 +2,8 @@
 // Created by bruno on 14/07/2020.
 //
 
-#ifndef PROVA_SERVER_CLIENTPROVA_H
-#define PROVA_SERVER_CLIENTPROVA_H
+#ifndef CLIENTPROVA_H
+#define CLIENTPROVA_H
 
 #include <iostream>
 
@@ -13,4 +13,4 @@ public:
 };
 
 
-#endif //PROVA_SERVER_CLIENTPROVA_H
+#endif //CLIENTPROVA_H

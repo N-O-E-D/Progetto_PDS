@@ -2,8 +2,8 @@
 // Created by bruno on 14/07/2020.
 //
 
-#ifndef SOCKET_PROVA_SERVER_SERVERPROVA_H
-#define SOCKET_PROVA_SERVER_SERVERPROVA_H
+#ifndef SERVERPROVA_H
+#define SERVERPROVA_H
 
 
 class ServerProva {
@@ -12,4 +12,4 @@ public:
 };
 
 
-#endif //SOCKET_PROVA_SERVER_SERVERPROVA_H
+#endif //SERVERPROVA_H
