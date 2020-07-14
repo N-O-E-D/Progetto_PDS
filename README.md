@@ -1,4 +1,4 @@
-# Progetto_PDS
+# Progetto PDS
 
 Il progetto mira a costruire un sistema client-server che esegua un backup incrementale
 del contenuto di una cartella (e tutte le sue sottocartelle) sul computer locale su un server remoto. Una volta lanciato, il sistema funzionerà come un servizio in background mantenendo il contenuto della cartella configurata sincronizzata con la copia remota: ogni volta che il contenuto monitorato cambia (vengono aggiunti nuovi file, quelli esistenti vengono modificati e / o rimossi), il comando adatto verrà inviato attraverso la rete per replicare le modifiche sull'altro lato. In caso di errori temporanei (porzionamento della rete o guasto del server remoto), il sistema continuerà a monitorare l'evoluzione della cartella locale e tenterà di sincronizzare nuovamente finchè la condizione di errore transitorio scompare).
@@ -6,7 +6,7 @@ del contenuto di una cartella (e tutte le sue sottocartelle) sul computer locale
 
 ### Background e working environment richiesti
 
-Conoscenza delle astrazioni generali di C ++ 17 e della libreria STL C ++.
+Conoscenza delle astrazioni generali di C++ 17 e della libreria STL C++.
 Conoscenza di concorrenza, sincronizzazione ed elaborazione in background. Il sistema sarà sviluppato utilizzando librerie di terze parti (ad es. Boost.asio) al fine di
 supportare l'implementazione su più piattaforme.
 
