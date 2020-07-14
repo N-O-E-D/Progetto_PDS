@@ -5,5 +5,5 @@
 #include "SocketProvaServer.h"
 
 void SocketProvaServer::printInfo() {
-    std::cout<<"prova Server!"<<std::endl;
+    std::cout<<"prova Server socket!"<<std::endl;
 }
