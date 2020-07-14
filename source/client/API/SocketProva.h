@@ -7,7 +7,11 @@
 
 
 class SocketProva {
-int lorenzoProva;
+int brunoProva;
+public:
+    void printInfo(){
+        std::cout<<"brunoProva!"<<std::endl;
+    }
 };
 
 

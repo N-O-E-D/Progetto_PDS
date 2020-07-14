@@ -3,3 +3,12 @@
 //
 
 #include "SocketProva.h"
+
+int main(){
+    SocketProva s1;
+
+    s1.printInfo();
+
+    return 0;
+
+}
