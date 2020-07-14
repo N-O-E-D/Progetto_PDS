@@ -8,6 +8,7 @@
 
 class SocketProva {
 int brunoProva;
+int lorenzo;
 public:
     void printInfo(){
         std::cout<<"brunoProva!"<<std::endl;
