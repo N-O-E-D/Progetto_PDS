@@ -39,3 +39,8 @@ richieste dai client. Il server deve essere progettato per gestirne più di un c
 ## LINK PROGETTO:
 - documento: https://docs.google.com/document/d/1_EYECKDJnXkgcdtO51mPQqZi-ZIg2k6e2CJkWicUiTI/edit?usp=sharing
 - jumboard: https://jamboard.google.com/d/1yEwsyDGlrBQfzyoAN9BUJ87L-m39p6McUEE_FGm3Bwo/edit?usp=sharing
+
+## LINK BOOST.ASIO:
+- video: https://www.youtube.com/watch?v=rwOv_tw2eA4
+- slides: https://github.com/CppCon/CppCon2016/blob/master/Tutorials/Asynchronous%20IO%20with%20Boost.Asio/Asynchronous%20IO%20with%20Boost.Asio%20-%20Michael%20Caisse%20-%20CppCon%202016.pdf
+
