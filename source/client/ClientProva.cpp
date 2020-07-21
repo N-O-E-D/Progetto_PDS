@@ -6,4 +6,5 @@
 
 void ClientProva::printInfo() {
     std::cout<<"prova Client!"<<std::endl;
+    std::cout<<"xd"<<std::endl;
 }
