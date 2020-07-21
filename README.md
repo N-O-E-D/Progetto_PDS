@@ -26,7 +26,7 @@ Per rimanere sincronizzati, sia il client che il server devono avere un'immagine
 ### Lato Client
 
 Il lato client è responsabile del monitoraggio continuo di una cartella specifica che può essere specificata in qualsiasi modo ragionevole (parametro della riga di comando, file di configurazione, variabile d'ambiente ...) e verificare che tutti i contenuti siano sincronizzati con il lato sever. Per eseguire questa operazione, si può fare affidamento sulla classe del filesystem fornita con la libreria C ++ 17 o Boost one (https://www.boost.org/doc/libs/1_73_0/libs/filesystem/doc/index.htm). Ogni volta che viene rilevata una discrepanza, l'entry locale corrispondente deve essere contrassegnata come non valida ed è necessario prendere alcune disposizioni per trasferire il file (aggiornato) sul server. Alcuni indicazioni su come creare un watcher del file system sono disponibili qui
-(Https://solarianprogrammer.com/2019/01/13/cpp-17-filesystem-write-file-watchermonitor/)
+(Https://solarianprogrammer.com/2019/01/13/cpp-17-filesystem-write-file-watcher-monitor/)
 
 ### Lato Server
 
