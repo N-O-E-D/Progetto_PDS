@@ -4,13 +4,13 @@ project(server)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS -pthread)
 
-add_executable(erver main.cpp)
+add_executable(server main.cpp)
 
 # OpenSSL Libraries
 find_package(OpenSSL)
 if(OpenSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
-    target_link_libraries(sever ${OPENSSL_LIBRARIES})
+    target_link_libraries(server ${OPENSSL_LIBRARIES})
 else()
     message(FATAL_ERROR "Could not find OpenSSL")
 endif()
