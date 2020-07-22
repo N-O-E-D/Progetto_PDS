@@ -3,24 +3,33 @@
 //
 
 #include <iostream>
-#include <boost/rational.hpp>
-#include <openssl/sha.h>
+#include "FileWatcher.h"
 
-int main(){
+int main() {
+    // Create a FileWatcher instance that will check the current folder for changes every 5 seconds
+    FileWatcher fw{"../test", std::chrono::milliseconds(5000)};
 
-    std::cout<<"Client\n";
+    // Start monitoring a folder for changes and (in case of changes)
+    // run a user provided lambda function
+    fw.start([] (std::string path_to_watch, FileStatus status) -> void {
+        // Process only regular files, all other file types are ignored
+        if(!(std::filesystem::is_regular_file(std::filesystem::path(path_to_watch)) && status != FileStatus::erased )) {
+            std::cout << "Not processed: " << path_to_watch << std::endl;
+            return;
+        }
 
-    // Boost test
-    boost::rational<int> a (2,3);
-    std::cout<<"Prova boost: " << a << std::endl;
-
-    // OpenSSL test
-    unsigned char ibuf[] = "sha1 test";
-    unsigned char obuf[20];
-
-    SHA1(ibuf, 10, obuf);
-    std::cout<<"SHA1: ";
-    for (int i = 0; i < 20; i++) printf("%02x ", obuf[i]);
-
-    return 0;
+        switch(status) {
+            case FileStatus::created:
+                std::cout << "File created: " << path_to_watch << '\n';
+                break;
+            case FileStatus::modified:
+                std::cout << "File modified: " << path_to_watch << '\n';
+                break;
+            case FileStatus::erased:
+                std::cout << "File erased: " << path_to_watch << '\n';
+                break;
+            default:
+                std::cout << "Error! Unknown file status.\n";
+        }
+    });
 }
