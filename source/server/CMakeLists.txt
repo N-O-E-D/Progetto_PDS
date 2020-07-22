@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(server)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS -pthread)
 
 add_executable(erver main.cpp)
 
@@ -15,13 +16,15 @@ else()
 endif()
 
 # Boost Libraries
-find_package(Boost)
+find_package(Boost COMPONENTS system thread REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     target_link_libraries(server ${Boost_LIBRARIES})
 else()
     message(FATAL_ERROR "Could not find Boost")
 endif()
+
+
 
 
 
