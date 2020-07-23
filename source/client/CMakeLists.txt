@@ -3,7 +3,7 @@ project(client)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(client main.cpp FileWatcher.h)
+add_executable(client main.cpp FileWatcher.h FileSystemWatcher.cpp FileSystemWatcher.h)
 
 # OpenSSL Libraries
 find_package(OpenSSL)
