@@ -125,6 +125,5 @@ int main() {
     //boost::asio::post(pool,[&ss2](){handleSocket(ss2);});
 
     pool.join();
-
     return 0;
 }
