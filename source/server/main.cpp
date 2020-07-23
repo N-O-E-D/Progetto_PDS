@@ -14,7 +14,7 @@ class Socket{
     int sockfd;
 
     Socket(int sockfd): sockfd(sockfd){
-        std::cout<<"Socket "<<sockfd<<" created"<<std::endl;
+        std::cout<<"Socket(sockfd) "<<sockfd<<" created"<<std::endl;
     }
 
     Socket(const Socket &) = delete; //=delete impedisce al compilatore di creare un costruttore automaticamente
@@ -30,7 +30,7 @@ public:
         // (in questo caso, molto probabilmente sarà TCP)
         sockfd = ::socket(AF_INET, SOCK_STREAM, 0);  //restituisce il file descriptor associato al socket
         if(sockfd < 0) throw std::runtime_error("Cannot create socket");
-        std::cout << "Socket " << sockfd << " created" << std::endl;
+        std::cout << "Socket() " << sockfd << " created" << std::endl;
     }
 
     ~Socket(){
@@ -63,10 +63,10 @@ public:
         return res;
     }
 
-    void connect(struct sockaddr_in *addr, unsigned int len){
+    /*void connect(struct sockaddr_in *addr, unsigned int len){
         if(::connect(sockfd, reinterpret_cast<struct sockaddr*>(addr),len)!=0)
             throw std::runtime_error("Cannot connect to remote socket");
-    }
+    }*/
 };
 
 //ServerSocket eredita privatamente da Socket -> i metodi pubblici di Socket diventano privati in ServerSocket, dopo averli ereditati
@@ -78,9 +78,9 @@ public:
         sockaddrIn.sin_family = AF_INET;
         //sockaddrIn.sin_len = sizeof(sockaddrIn);
         sockaddrIn.sin_addr.s_addr = htonl(INADDR_ANY);
-        if(::bind(sockfd, reinterpret_cast<struct sockaddr*>(&sockaddrIn),sizeof(sockaddrIn))!=0)
+        if(::bind(sockfd, reinterpret_cast<struct sockaddr*>(&sockaddrIn),sizeof(sockaddrIn))!=0) //fa il bind tra socket e address e port specificati nella struct
             throw std::runtime_error("Cannot bind port ");
-        if(::listen(sockfd, 8)!=0)
+        if(::listen(sockfd, 3)!=0)
             throw std::runtime_error("Cannot bind port ");
     }
 
@@ -91,36 +91,12 @@ public:
     }
 };
 
-ServerSocket ss1(5000);
-ServerSocket ss2(5001);
-
-void handleSocket1(){
+void handleSocket(ServerSocket& ss){
     while(true){
         struct sockaddr_in addr;
         unsigned int len = sizeof(addr);
         std::cout<<"Waiting for incoming connection..."<<std::endl;
-        Socket s = ss1.accept(&addr, &len);
-        char name[16];
-        if( inet_ntop(AF_INET, &addr.sin_addr, name, sizeof(name))==nullptr)
-            throw std::runtime_error("Cannot convert a...");
-        std::cout << "Got a connection from "<< name << ":" << ntohs(addr.sin_port) << "\n";
-        char buffer[1024];
-        int size = s.read(buffer, sizeof(buffer)-1, 0);
-        buffer[size]=0; //mette il "tappo" finale, per permettere di riconoscere la fine del messaggio
-        std::string str(buffer);
-        s.write(buffer, size, 0); //rimando indietro quello che mi ha mandato il client
-        std::cout<<"Received "<<str<<std::endl;
-        std::cout << "Connection closed" << std::endl;
-    }
-    return;
-}
-
-void handleSocket2(){
-    while(true){
-        struct sockaddr_in addr;
-        unsigned int len = sizeof(addr);
-        std::cout<<"Waiting for incoming connection..."<<std::endl;
-        Socket s = ss2.accept(&addr, &len);
+        Socket s = ss.accept(&addr, &len);
         char name[16];
         if( inet_ntop(AF_INET, &addr.sin_addr, name, sizeof(name))==nullptr)
             throw std::runtime_error("Cannot convert a...");
@@ -138,12 +114,15 @@ void handleSocket2(){
 
 int main() {
 
+    ServerSocket ss1(5000);
+    //ServerSocket ss2(5001);
+
     //launch the pool with 4 threads
     boost::asio::thread_pool pool(4); //una coda di thread di dimensione 4: 4 thread alla volta possono essere eseguiti in parallelo
 
     //submit a function to the pool
-    boost::asio::post(pool,handleSocket1);
-    boost::asio::post(pool,handleSocket2);
+    boost::asio::post(pool,[&ss1](){handleSocket(ss1);});
+    //boost::asio::post(pool,[&ss2](){handleSocket(ss2);});
 
     pool.join();
 
