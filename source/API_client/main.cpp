@@ -1,24 +1,36 @@
-//
-// Created by bruno on 14/07/2020.
-//
-
 #include <iostream>
-#include <boost/rational.hpp>
-#include <openssl/sha.h>
 
-int main(){
+#include <boost/asio/io_service.hpp>
 
-    // Boost test
-    boost::rational<int> a (2,3);
-    std::cout<<"Prova boost: " << a << std::endl;
+#include "ClientSocket.h"
 
-    // OpenSSL test
-    unsigned char ibuf[] = "sha1 test";
-    unsigned char obuf[20];
 
-    SHA1(ibuf, 10, obuf);
-    std::cout<<"SHA1: ";
-    for (int i = 0; i < 20; i++) printf("%02x ", obuf[i]);
+
+int main(int argc, char* argv[])
+{
+    if (argc != 4) {
+        std::cerr << "Usage: client <address> <port> <filePath>\n";
+        return 1;
+    }
+
+
+    auto address = argv[1];
+    auto port = argv[2];
+    auto filePath = argv[3];
+
+    try {
+        boost::asio::io_service ioService;
+
+        boost::asio::ip::tcp::resolver resolver(ioService);
+        auto endpointIterator = resolver.resolve({ address, port });
+        ClientSocket client(ioService, endpointIterator, filePath);
+
+        ioService.run();
+    } catch (std::fstream::failure& e) {
+        std::cerr << e.what() << "\n";
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << "\n";
+    }
 
     return 0;
 }
