@@ -36,7 +36,7 @@ void Session::processRead(size_t t_bytesTransferred)
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
 
-    auto pos = m_fileName.find_last_of('\\');
+    /*auto pos = m_fileName.find_last_of('\\');
     if (pos != std::string::npos)
         m_fileName = m_fileName.substr(pos + 1);
 
@@ -57,14 +57,20 @@ void Session::processRead(size_t t_bytesTransferred)
                                      doReadFileContent(bytes);
                                  else
                                      handleError(__FUNCTION__, ec);
-                             });
+                             });*/
 }
 
 
 void Session::readData(std::istream &stream)
 {
+    std::string b;
+
+    stream >> m_messageType;
     stream >> m_fileName;
     stream >> m_fileSize;
+    std::cout<< m_messageType<<std::endl;
+    std::cout<< m_fileName<<std::endl;
+    std::cout<< m_fileSize<<std::endl;
     stream.read(m_buf.data(), 2);
 
     BOOST_LOG_TRIVIAL(trace) << m_fileName << " size is " << m_fileSize

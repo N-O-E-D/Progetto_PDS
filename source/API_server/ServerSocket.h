@@ -36,6 +36,7 @@ private:
     std::ofstream m_outputFile;
     size_t m_fileSize;
     std::string m_fileName;
+    std::string m_messageType;
 };
 
 
