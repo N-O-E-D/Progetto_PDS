@@ -39,7 +39,7 @@ void ClientSocket::doConnect()
                                        //invio l'header
                                        writeBuffer(m_request);
                                    } else {
-                                       std::cout << "Coudn't connect to host. Please run server "
+                                       std::cout << "Couldn't connect to host. Please run server "
                                                     "or check network connection.\n";
                                        BOOST_LOG_TRIVIAL(error) << "Error: " << ec.message();
                                    }
