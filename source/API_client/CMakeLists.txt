@@ -3,7 +3,7 @@ project(API_client)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(API_client ClientSocket.cpp ClientSocket.h main.cpp ../API_server/ServerSocket.cpp ../API_server/ServerSocket.h)
+add_executable(API_client ClientSocket.cpp ClientSocket.h main.cpp )
 
 # OpenSSL Libraries
 find_package(OpenSSL)

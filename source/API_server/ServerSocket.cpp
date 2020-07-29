@@ -35,29 +35,13 @@ void Session::processRead(size_t t_bytesTransferred)
 
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
-
-    /*auto pos = m_fileName.find_last_of('\\');
-    if (pos != std::string::npos)
-        m_fileName = m_fileName.substr(pos + 1);
-
-    createFile();
-
-    // write extra bytes to file
-    do {
-        requestStream.read(m_buf.data(), m_buf.size());
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << " write " << requestStream.gcount() << " bytes.";
-        m_outputFile.write(m_buf.data(), requestStream.gcount());
-    } while (requestStream.gcount() > 0);
-
-    auto self = shared_from_this();
-    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_buf.size()),
-                             [this, self](boost::system::error_code ec, size_t bytes)
-                             {
+    /*auto self = shared_from_this();
+    m_socket.async_read_some(boost::asio::buffer(m_buf, m_fileSize),
+                             [this, self](boost::system::error_code ec, size_t bytes) {
                                  if (!ec)
                                      doReadFileContent(bytes);
-                                 else
-                                     handleError(__FUNCTION__, ec);
                              });*/
+
 }
 
 
@@ -66,42 +50,28 @@ void Session::readData(std::istream &stream)
     std::string b;
 
     stream >> m_messageType;
-    stream >> m_fileName;
-    stream >> m_fileSize;
+    stream >> m_pathName;
+    if(m_messageType=="UPDATE_NAME")
+        stream >> m_newName;
     std::cout<< m_messageType<<std::endl;
-    std::cout<< m_fileName<<std::endl;
-    std::cout<< m_fileSize<<std::endl;
-    stream.read(m_buf.data(), 2);
+    std::cout<< m_pathName<<std::endl;
+    if(m_messageType=="UPDATE_NAME")
+        std::cout<< m_newName<<std::endl;
+    m_buf.resize(m_fileSize);
 
-    BOOST_LOG_TRIVIAL(trace) << m_fileName << " size is " << m_fileSize
+    BOOST_LOG_TRIVIAL(trace) << m_pathName << " size is " << m_fileSize
                              << ", tellg = " << stream.tellg();
-}
-
-
-void Session::createFile()
-{
-    m_outputFile.open(m_fileName, std::ios_base::binary);
-    if (!m_outputFile) {
-        BOOST_LOG_TRIVIAL(error) << __LINE__ << ": Failed to create: " << m_fileName;
-        return;
-    }
 }
 
 
 void Session::doReadFileContent(size_t t_bytesTransferred)
 {
     if (t_bytesTransferred > 0) {
-        m_outputFile.write(m_buf.data(), static_cast<std::streamsize>(t_bytesTransferred));
-
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << " recv " << m_outputFile.tellp() << " bytes";
-
-        if (m_outputFile.tellp() >= static_cast<std::streamsize>(m_fileSize)) {
-            std::cout << "Received file: " << m_fileName << std::endl;
-            return;
-        }
+       m_file.insert(m_file.end(),m_buf.begin(),m_buf.end());
     }
+
     auto self = shared_from_this();
-    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_buf.size()),
+    m_socket.async_read_some(boost::asio::buffer(m_buf, m_fileSize),
                              [this, self](boost::system::error_code ec, size_t bytes)
                              {
                                  doReadFileContent(bytes);

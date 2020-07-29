@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <vector>
 #include <fstream>
 #include <string>
 #include <memory>
@@ -30,13 +31,14 @@ private:
 
 
     TcpSocket m_socket;
-    enum { MaxLength = 40960 };
-    std::array<char, MaxLength> m_buf;
+    std::vector<char> m_buf;
     boost::asio::streambuf m_requestBuf_;
     std::ofstream m_outputFile;
     size_t m_fileSize;
-    std::string m_fileName;
+    std::string m_pathName;
     std::string m_messageType;
+    std::string m_newName;
+    std::vector<char> m_file;
 };
 
 
