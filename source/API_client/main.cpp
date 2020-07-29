@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
         boost::asio::ip::tcp::resolver resolver(ioService);
         auto endpointIterator = resolver.resolve({ address, port });
         ClientSocket client(ioService, endpointIterator);
-        client.insert(filePath);
+        client.remove(filePath);
         ioService.run();
 
     } catch (std::fstream::failure& e) {

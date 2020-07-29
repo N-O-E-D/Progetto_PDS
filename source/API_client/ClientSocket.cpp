@@ -64,7 +64,7 @@ void ClientSocket::doWriteFile(const boost::system::error_code& t_ec)
             BOOST_LOG_TRIVIAL(trace) << ss.str();
             std::cout<<m_buf.data()<<std::endl;
             auto buf = boost::asio::buffer(m_buf.data(), static_cast<size_t>(m_sourceFile.gcount()));
-            //writeBuffer(buf);
+            writeBuffer(buf);
         }
     } else {
         BOOST_LOG_TRIVIAL(error) << "Error: " << t_ec.message();
@@ -86,7 +86,7 @@ void ClientSocket::buildHeader(messageType mt){
             requestStream << "REMOVE_DIR\n" << m_path << "\n" << "\n\n";
             break;
         case INSERT:
-            requestStream << "INSERT\n" << m_path << "\n" <<m_fileSize<<"\n\n";
+            requestStream << "INSERT\n" << m_path << "\n" <<std::to_string(m_fileSize)<<"\n\n";
             break;
         default:
             return;
@@ -140,6 +140,7 @@ void ClientSocket::writeBuffer(Buffer& t_buffer)
                              t_buffer,
                              [this](boost::system::error_code ec, size_t )
                              {
+                                std::cout<<"file inviato"<<std::endl;
                                 if(m_messageType==UPDATE || m_messageType==INSERT) {
                                     doWriteFile(ec);
                                 }

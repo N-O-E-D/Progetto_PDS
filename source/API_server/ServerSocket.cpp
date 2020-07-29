@@ -35,12 +35,16 @@ void Session::processRead(size_t t_bytesTransferred)
 
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
-    /*auto self = shared_from_this();
-    m_socket.async_read_some(boost::asio::buffer(m_buf, m_fileSize),
-                             [this, self](boost::system::error_code ec, size_t bytes) {
-                                 if (!ec)
-                                     doReadFileContent(bytes);
-                             });*/
+    if (m_messageType=="UPDATE" || m_messageType=="INSERT") {
+        std::cout<<"dentro"<<std::endl;
+        auto self = shared_from_this();
+        m_buf.resize(m_fileSize);
+        m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_fileSize),
+                                 [this, self](boost::system::error_code ec, size_t bytes) {
+                                     if (!ec)
+                                         doReadFileContent(bytes);
+                                 });
+    }
 
 }
 
@@ -53,11 +57,15 @@ void Session::readData(std::istream &stream)
     stream >> m_pathName;
     if(m_messageType=="UPDATE_NAME")
         stream >> m_newName;
+    if(m_messageType=="UPDATE" || m_messageType=="INSERT")
+        stream >> m_fileSize;
     std::cout<< m_messageType<<std::endl;
     std::cout<< m_pathName<<std::endl;
     if(m_messageType=="UPDATE_NAME")
         std::cout<< m_newName<<std::endl;
-    m_buf.resize(m_fileSize);
+    if(m_messageType=="UPDATE" || m_messageType=="INSERT")
+        std::cout <<m_fileSize<<std::endl;
+
 
     BOOST_LOG_TRIVIAL(trace) << m_pathName << " size is " << m_fileSize
                              << ", tellg = " << stream.tellg();
@@ -69,9 +77,10 @@ void Session::doReadFileContent(size_t t_bytesTransferred)
     if (t_bytesTransferred > 0) {
        m_file.insert(m_file.end(),m_buf.begin(),m_buf.end());
     }
-
+    for (int i=0;i<m_file.size();i++)
+        std::cout<<m_file.at(i);
     auto self = shared_from_this();
-    m_socket.async_read_some(boost::asio::buffer(m_buf, m_fileSize),
+    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_fileSize),
                              [this, self](boost::system::error_code ec, size_t bytes)
                              {
                                  doReadFileContent(bytes);
