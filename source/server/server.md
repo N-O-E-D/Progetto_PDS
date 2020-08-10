@@ -6,7 +6,7 @@ del tipo "COMANDO path" e il server riconoscerà il comando (quest'ultima parte 
 
 1) avviare il programma
 2) da un terminale, digitare "telnet localhost 5000" (se il server è in ascolto su più porte contemporaneamente, eseguire questo punto su altri terminali)
-3) autenticazione nel formato *nome utente password*
+3) autenticazione nel formato *nome_utente password*
 4) riconoscimento dei comandi (es. ADD /usr/file.txt -> il server riconoscerà il comando, quindi la prima parte della stringa)
 5) chiusura della conessione
 
