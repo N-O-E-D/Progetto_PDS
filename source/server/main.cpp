@@ -1,129 +1,163 @@
+#include <ctime>
 #include <iostream>
-#include <unistd.h>
-#include <stdexcept>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <boost/asio.hpp>
-#include <boost/asio/thread_pool.hpp>
 #include <string>
-#include <thread>
+#include <boost/asio.hpp>
+#include <boost/array.hpp>
+#include <boost/asio/thread_pool.hpp>
+#include <boost/asio.hpp>
+#include <boost/array.hpp>
+#include <boost/filesystem/operations.hpp>  //include boost::filesystem::path.hpp
+#include <boost/filesystem/fstream.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/iterator.hpp>
+#include <boost/cstdint.hpp>
+#include "Server.h"
 
-class Socket{
-    int sockfd;
+//create a Server object (provides ADD, MODIFY, REMOVE methods)
+Server server;
 
-    Socket(int sockfd): sockfd(sockfd){
-        std::cout<<"Socket(sockfd) "<<sockfd<<" created"<<std::endl;
-    }
+std::map<std::string,int> commands = {
+        {"ADD",1},
+        {"REMOVE",2},
+        {"REMOVE_ALL",3},
+        {"RENAME",4},
+        {"MODIFY",5}
+};
 
-    Socket(const Socket &) = delete; //=delete impedisce al compilatore di creare un costruttore automaticamente
-    Socket &operator=(const Socket &) = delete;
+std::map<std::string,std::string> users = {
+        {"Lorenzo","passwd1"},
+        {"Giandonato","passwd2"},
+        {"Bruno","passwd3"}
+};
 
-    friend class ServerSocket;
+using boost::asio::ip::tcp;
 
-public:
-    Socket(){
-        //AF_INET = socket basato su ipv4
-        //SOCK_STREAM = socket basato su comunicazione orientata al flusso
-        //0 = chiede al sistema operativo di abbinare un protocollo in base ai due parametri precedenti
-        // (in questo caso, molto probabilmente sarà TCP)
-        sockfd = ::socket(AF_INET, SOCK_STREAM, 0);  //restituisce il file descriptor associato al socket
-        if(sockfd < 0) throw std::runtime_error("Cannot create socket");
-        std::cout << "Socket() " << sockfd << " created" << std::endl;
-    }
+int selectComando(const std::string& str){
+    auto cmd = str.substr(0,str.find(" "));  //i comandi sono del tipo "UPDATE path", quindi prendo la sottostringa fino al primo spazio, quindi il comando
+    return commands[cmd];
+}
 
-    ~Socket(){
-        if(sockfd != 0){
-            std::cout << "Socket " << sockfd << " closed" << std::endl;
-            close(sockfd);
+bool autentica(boost::asio::streambuf& recmessage){
+    //from streambuf to string
+    std::string recmex(boost::asio::buffers_begin(recmessage.data()),boost::asio::buffers_begin(recmessage.data())+recmessage.size());
+    auto username = recmex.substr(0,recmex.find(" "));
+    auto password = recmex.substr(username.length()+1);
+    std::cout<<username<<std::endl;
+    password.pop_back();  //rimuove "\n" (next line)
+    password.pop_back();  //rimuove "\r" (carriage return)
+    std::cout<<password<<std::endl;
+    std::cout<<users.at(username)<<std::endl;
+    try{
+        if(password.compare(users.at(username))==0) {
+            std::cout<<"Benvenuto, "<<username<<"!"<<std::endl;
+            return true;
+        }
+        else {
+            std::cout<<"Password non corretta."<<std::endl;
+            return false;
         }
     }
+    catch(std::out_of_range& exception){
+        std::cout<<"eccezione"<<std::endl;
+        return false;}
 
-    Socket(Socket &&other) : sockfd(other.sockfd){
-        other.sockfd = 0;
+}
+
+void handleSocket(int portnum){
+    try
+    {
+        // Any program that uses asio need to have at least one io_service object
+        boost::asio::io_service io_service;
+        //std::cout<<"ioservice created"<<std::endl;
+
+        // acceptor object needs to be created to listen for new connections
+        tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), portnum));
+        //std::cout<<"acceptor created"<<std::endl;
+
+        while (true)
+        {
+            // creates a socket
+            tcp::socket socket(io_service);
+            //std::cout<<"socket created"<<std::endl;
+
+            // wait and listen
+            std::cout<<"Waiting for connection..."<<std::endl;
+            acceptor.accept(socket);
+
+            // prepare message to send back to client
+            auto sendmessage = boost::asio::buffer("Hello from server!\nPlease authenticate (username password):");
+
+            //boost::system::error_code ignored_error;
+
+            // writing the message
+            //socket.write_some(sendmessage, ignored_error);
+            boost::asio::write(socket,boost::asio::buffer(sendmessage));
+
+
+
+            //prepare buf to store received message by client
+            boost::asio::streambuf recmessage;
+
+            //receive something on the socket
+            //int size = socket.read_some(recmessage,ignored_error);
+            //socket.write_some(recmessage, ignored_error);
+            boost::asio::read_until(socket,recmessage,"\n");
+
+            if(autentica(recmessage)) {
+                recmessage.consume(recmessage.size());  //pulisce il buffer in ricezione...
+                boost::asio::read_until(socket,recmessage,"\n");  //...per riempirlo subito dopo
+
+                //from streambuf to string
+                std::string recmex(boost::asio::buffers_begin(recmessage.data()),boost::asio::buffers_begin(recmessage.data())+recmessage.size());
+
+                switch (selectComando(recmex)) {
+                    case 1:
+                        server.add();
+                        break;
+                    case 2:
+                        server.remove();
+                        break;
+                    case 3:
+                        server.remove_all();
+                        break;
+                    case 4:
+                        server.rename();
+                        break;
+                    case 5:
+                        server.modify();
+                        break;
+                    default:
+                        std::cout << "Comando errato" << std::endl;
+                        break;
+                }
+
+            }
+
+            //boost::asio::write(socket,recmessage);
+        }
     }
-
-    Socket &operator=(Socket &&other){
-        if(sockfd != 0) close(sockfd);
-        sockfd = other.sockfd;
-        other.sockfd = 0;
-        return *this;
-    }
-
-    ssize_t read(char *buffer, size_t len, int options){
-        ssize_t res = recv(sockfd, buffer, len, options);
-        if(res<0) throw std::runtime_error("Cannot receive from socket");
-        return res;
-    }
-
-    ssize_t write(const char *buffer, size_t len, int options){
-        ssize_t res = send(sockfd, buffer, len, options);
-        if(res<0) throw std::runtime_error("Cannot write to socket");
-        return res;
-    }
-
-    /*void connect(struct sockaddr_in *addr, unsigned int len){
-        if(::connect(sockfd, reinterpret_cast<struct sockaddr*>(addr),len)!=0)
-            throw std::runtime_error("Cannot connect to remote socket");
-    }*/
-};
-
-//ServerSocket eredita privatamente da Socket -> i metodi pubblici di Socket diventano privati in ServerSocket, dopo averli ereditati
-class ServerSocket: private Socket{
-public:
-    ServerSocket(int port){
-        struct sockaddr_in sockaddrIn;
-        sockaddrIn.sin_port = htons(port);
-        sockaddrIn.sin_family = AF_INET;
-        //sockaddrIn.sin_len = sizeof(sockaddrIn);
-        sockaddrIn.sin_addr.s_addr = htonl(INADDR_ANY);
-        if(::bind(sockfd, reinterpret_cast<struct sockaddr*>(&sockaddrIn),sizeof(sockaddrIn))!=0) //fa il bind tra socket e address e port specificati nella struct
-            throw std::runtime_error("Cannot bind port ");
-        if(::listen(sockfd, 3)!=0)
-            throw std::runtime_error("Cannot bind port ");
-    }
-
-    Socket accept(struct sockaddr_in* addr, unsigned int* len){
-        int fd = ::accept(sockfd, reinterpret_cast<struct sockaddr*>(addr),(socklen_t*)len);
-        if(fd<0) throw std::runtime_error("Cannot accept socket");
-        return Socket(fd);
-    }
-};
-
-void handleSocket(ServerSocket& ss){
-    while(true){
-        struct sockaddr_in addr;
-        unsigned int len = sizeof(addr);
-        std::cout<<"Waiting for incoming connection..."<<std::endl;
-        Socket s = ss.accept(&addr, &len);
-        char name[16];
-        if( inet_ntop(AF_INET, &addr.sin_addr, name, sizeof(name))==nullptr)
-            throw std::runtime_error("Cannot convert a...");
-        std::cout << "Got a connection from "<< name << ":" << ntohs(addr.sin_port) << "\n";
-        char buffer[1024];
-        int size = s.read(buffer, sizeof(buffer)-1, 0);
-        buffer[size]=0; //mette il "tappo" finale, per permettere di riconoscere la fine del messaggio
-        std::string str(buffer);
-        s.write(buffer, size, 0); //rimando indietro quello che mi ha mandato il client
-        std::cout<<"Received "<<str<<std::endl;
-        std::cout << "Connection closed" << std::endl;
+    catch (std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
     }
     return;
 }
 
-int main() {
 
-    ServerSocket ss1(5000);
-    //ServerSocket ss2(5001);
 
-    //launch the pool with 4 threads
-    boost::asio::thread_pool pool(4); //una coda di thread di dimensione 4: 4 thread alla volta possono essere eseguiti in parallelo
+int main()
+{
+
+    //launch the pool with num_threads threads
+    //Ogni thread gestisce un client (su una porta diversa), tramite una coda di richieste provenienti dallo stesso
+    //si possono gestire fino a num_threads clients contemporaneamente
+    boost::asio::thread_pool pool(2); //una coda di thread di dimensione 4: 4 thread alla volta possono essere eseguiti in parallelo
 
     //submit a function to the pool
-    boost::asio::post(pool,[&ss1](){handleSocket(ss1);});
-    //boost::asio::post(pool,[&ss2](){handleSocket(ss2);});
+    boost::asio::post(pool,[](){handleSocket(5000);});
+    //boost::asio::post(pool,[](){handleSocket(5001);});
 
     pool.join();
+
     return 0;
 }
