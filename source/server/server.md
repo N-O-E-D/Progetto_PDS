@@ -12,9 +12,9 @@ del tipo "COMANDO path" e il server riconoscerà il comando (quest'ultima parte 
 
 ### Credenziali
 
-- <h6>nome utente</h6>: Lorenzo - <h6>password</h6>: passwd1
-- <h6>nome utente</h6>: Giandonato -  <h6>password</h6>: passwd2
-- <h6>nome utente</h6>: Bruno - <h6>password</h6>: passwd3
+- **nome utente**: Lorenzo - **password**: passwd1
+- **nome utente** Giandonato -  **password**: passwd2
+- **nome utente**: Bruno - **password**: passwd3
 
 ### Problemi
 - Impossibilità di specificare quante richieste avere in coda (parametro della listen nelle librerie std dei socket) --> probabilmente è importante (?)
