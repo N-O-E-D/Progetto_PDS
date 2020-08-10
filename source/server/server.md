@@ -6,15 +6,15 @@ del tipo "COMANDO path" e il server riconoscerà il comando (quest'ultima parte 
 
 1) avviare il programma
 2) da un terminale, digitare "telnet localhost 5000" (se il server è in ascolto su più porte contemporaneamente, eseguire questo punto su altri terminali)
-3) autenticazione nel formato <nome utente> <password>
+3) autenticazione nel formato *nome utente password*
 4) riconoscimento dei comandi (es. ADD /usr/file.txt -> il server riconoscerà il comando, quindi la prima parte della stringa)
 5) chiusura della conessione
 
 ### Credenziali
 
-- nome utente: Lorenzo - password: passwd1
-- nome utente: Giandonato -  password: passwd2
-- nome utente: Bruno - password: passwd3
+- <h6>nome utente</h6>: Lorenzo - <h6>password</h6>: passwd1
+- <h6>nome utente</h6>: Giandonato -  <h6>password</h6>: passwd2
+- <h6>nome utente</h6>: Bruno - <h6>password</h6>: passwd3
 
 ### Problemi
 - Impossibilità di specificare quante richieste avere in coda (parametro della listen nelle librerie std dei socket) --> probabilmente è importante (?)
