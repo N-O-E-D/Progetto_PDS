@@ -1,24 +1,28 @@
-//
-// Created by bruno on 14/07/2020.
-//
-
 #include <iostream>
-#include <boost/rational.hpp>
-#include <openssl/sha.h>
 
-int main(){
+#include <boost/asio/io_service.hpp>
 
-    // Boost test
-    boost::rational<int> a (2,3);
-    std::cout<<"Prova boost: " << a << std::endl;
+#include "ServerSocket.h"
 
-    // OpenSSL test
-    unsigned char ibuf[] = "sha1 test";
-    unsigned char obuf[20];
 
-    SHA1(ibuf, 10, obuf);
-    std::cout<<"SHA1: ";
-    for (int i = 0; i < 20; i++) printf("%02x ", obuf[i]);
+
+int main(int argc, char* argv[])
+{
+    if (argc != 3) {
+        std::cerr << "Usage: server <port> <workDirectory>\n";
+        return 1;
+    }
+
+
+    try {
+        boost::asio::io_service ioService;
+
+        ServerSocket server(ioService, std::stoi(argv[1]), argv[2]);
+
+        ioService.run();
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << "\n";
+    }
 
     return 0;
 }
