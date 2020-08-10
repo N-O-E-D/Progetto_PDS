@@ -151,7 +151,7 @@ int main()
     //launch the pool with num_threads threads
     //Ogni thread gestisce un client (su una porta diversa), tramite una coda di richieste provenienti dallo stesso
     //si possono gestire fino a num_threads clients contemporaneamente
-    boost::asio::thread_pool pool(2); //una coda di thread di dimensione 4: 4 thread alla volta possono essere eseguiti in parallelo
+    boost::asio::thread_pool pool(4); //una coda di thread di dimensione 4: 4 thread alla volta possono essere eseguiti in parallelo
 
     //submit a function to the pool
     boost::asio::post(pool,[](){handleSocket(5000);});
