@@ -37,6 +37,7 @@ private:
     std::string m_pathName;
     std::string m_messageType;
     std::string m_newName;
+    std::string m_mdvalue;
     std::vector<char> m_file;
 };
 

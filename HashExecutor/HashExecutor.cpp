@@ -38,7 +38,11 @@ unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
         printf("%02x", md_value[i]);
     printf("\n");
     EVP_MD_CTX_free(md);
-    std::cout<<&md_value<<std::endl;
     return md_len;
+}
 
+bool compareHash(unsigned char md_value1[],unsigned char md_value2[], int md_len){
+    if(CRYPTO_memcmp(md_value1,md_value2, md_len)!=0)
+        return false;
+    return true;
 }

@@ -91,6 +91,12 @@ void ClientSocket::buildHeader(messageType mt){
         case CREATE_DIR:
             requestStream << "CREATE_DIR\n" << m_path<<"\n\n";
             break;
+        case SYNC_DIR:
+            requestStream << "SYNC_DIR\n" << m_path<<"\n\n";
+            break;
+        case SYNC_FILE:
+            requestStream << "SYNC_FILE\n" << m_path<<"\n"<<m_mdvalue<<"\n\n";
+            break;
         default:
             return;
             break;
@@ -139,8 +145,27 @@ void ClientSocket::createFile(const std::string &path) {
 void ClientSocket::createDir(const std::string &path) {
     m_path=path;
     m_messageType=CREATE_DIR;
-    openFile(m_path);
     buildHeader(CREATE_DIR);
+    doConnect();
+}
+void ClientSocket::syncDir(std::string const& path){
+    m_path=path;
+    m_messageType=SYNC_DIR;
+    buildHeader(SYNC_DIR);
+    doConnect();
+}
+void ClientSocket::syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len){
+    m_path=path;
+    m_messageType=SYNC_FILE;
+    printf("digest: ");
+    for(int i = 0; i < md_len; i++)
+        printf("%02x", md_value[i]);
+    printf("\n");
+    std::string sName(reinterpret_cast<char* >(md_value),(size_t) md_len);
+    m_mdvalue=sName;
+    for(int i = 0; i < md_len; i++)
+        printf("%02x", (unsigned char)sName[i]);
+    buildHeader(SYNC_FILE);
     doConnect();
 }
 template<class Buffer>

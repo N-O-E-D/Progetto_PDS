@@ -5,7 +5,7 @@
 
 #include <boost/asio.hpp>
 enum messageType{
-    UPDATE,UPDATE_NAME,REMOVE,REMOVE_DIR,CREATE_FILE,CREATE_DIR
+    UPDATE,UPDATE_NAME,REMOVE,REMOVE_DIR,CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE
 };
 
 class ClientSocket
@@ -24,6 +24,8 @@ public:
     void removeDir(std::string const& path);
     void createFile(std::string const& path);
     void createDir(std::string const& path);
+    void syncDir(std::string const& path);
+    void syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
 
 private:
     void openFile(std::string const& t_path);
@@ -41,6 +43,7 @@ private:
     std::ifstream m_sourceFile;
     std::string m_path;
     std::string m_newName;
+    std::string m_mdvalue;
     messageType m_messageType;
     int m_fileSize;
 

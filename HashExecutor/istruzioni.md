@@ -14,3 +14,9 @@ printf("The digest is: ");
         printf("%02x", md_value[i]);
     printf("\n");
 ``` 
+* per il confronto da due hash :
+``` 
+compareHash(md_value1,md_value2,md_len); //ritorna un bool
+``` 
+md_value sono due array di tipo  unsigned char . Per convertire da string ad unsigned char* fare
+reintrepret_cast<unsigned char*>(nomestringa.data());
