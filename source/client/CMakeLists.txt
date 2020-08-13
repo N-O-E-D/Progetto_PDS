@@ -3,7 +3,7 @@ project(client)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(client main.cpp FileSystemWatcher.cpp FileSystemWatcher.h ../API_client/ClientSocket.cpp ../API_client/ClientSocket.h)
+add_executable(client main.cpp ../API_client/ClientSocket.cpp ../API_client/ClientSocket.h FileSystemWatcher.h FileSystemWatcher.cpp PathStatusMap.h)
 
 # OpenSSL Libraries
 find_package(OpenSSL REQUIRED)
