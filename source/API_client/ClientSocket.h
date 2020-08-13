@@ -5,7 +5,7 @@
 
 #include <boost/asio.hpp>
 enum messageType{
-    UPDATE,UPDATE_NAME,REMOVE,REMOVE_DIR,INSERT
+    UPDATE,UPDATE_NAME,REMOVE,REMOVE_DIR,CREATE_FILE,CREATE_DIR
 };
 
 class ClientSocket
@@ -16,14 +16,14 @@ public:
     using TcpResolverIterator = TcpResolver::iterator;
     using TcpSocket = boost::asio::ip::tcp::socket;
 
-    ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator/*,
-           std::string const& t_path*/);
+    ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator);
 
     void update(std::string const& path);
     void updateName(std::string const& path, std::string const& newName);
     void remove(std::string const& path);
     void removeDir(std::string const& path);
-    void insert(std::string const& path);
+    void createFile(std::string const& path);
+    void createDir(std::string const& path);
 
 private:
     void openFile(std::string const& t_path);

@@ -35,7 +35,7 @@ void Session::processRead(size_t t_bytesTransferred)
 
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
-    if (m_messageType=="UPDATE" || m_messageType=="INSERT") {
+    if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
         std::cout<<"dentro"<<std::endl;
         auto self = shared_from_this();
         m_buf.resize(m_fileSize);
@@ -57,14 +57,14 @@ void Session::readData(std::istream &stream)
     stream >> m_pathName;
     if(m_messageType=="UPDATE_NAME")
         stream >> m_newName;
-    if(m_messageType=="UPDATE" || m_messageType=="INSERT")
+    if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE")
         stream >> m_fileSize;
     //debug
     std::cout<< m_messageType<<std::endl;
     std::cout<< m_pathName<<std::endl;
     if(m_messageType=="UPDATE_NAME")
         std::cout<< m_newName<<std::endl;
-    if(m_messageType=="UPDATE" || m_messageType=="INSERT")
+    if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE")
         std::cout <<m_fileSize<<std::endl;
 
 

@@ -85,8 +85,11 @@ void ClientSocket::buildHeader(messageType mt){
         case REMOVE_DIR:
             requestStream << "REMOVE_DIR\n" << m_path << "\n" << "\n\n";
             break;
-        case INSERT:
-            requestStream << "INSERT\n" << m_path << "\n" <<std::to_string(m_fileSize)<<"\n\n";
+        case CREATE_FILE:
+            requestStream << "CREATE_FILE\n" << m_path << "\n" <<std::to_string(m_fileSize)<<"\n\n";
+            break;
+        case CREATE_DIR:
+            requestStream << "CREATE_DIR\n" << m_path<<"\n\n";
             break;
         default:
             return;
@@ -126,11 +129,18 @@ void ClientSocket::removeDir(const std::string &path) {
     buildHeader(REMOVE_DIR);
     doConnect();
 }
-void ClientSocket::insert(const std::string &path) {
+void ClientSocket::createFile(const std::string &path) {
     m_path=path;
-    m_messageType=INSERT;
+    m_messageType=CREATE_FILE;
     openFile(m_path);
-    buildHeader(INSERT);
+    buildHeader(CREATE_FILE);
+    doConnect();
+}
+void ClientSocket::createDir(const std::string &path) {
+    m_path=path;
+    m_messageType=CREATE_DIR;
+    openFile(m_path);
+    buildHeader(CREATE_DIR);
     doConnect();
 }
 template<class Buffer>
@@ -141,7 +151,7 @@ void ClientSocket::writeBuffer(Buffer& t_buffer)
                              [this](boost::system::error_code ec, size_t )
                              {
                                 std::cout<<"file inviato"<<std::endl;
-                                if(m_messageType==UPDATE || m_messageType==INSERT) {
+                                if(m_messageType==UPDATE || m_messageType==CREATE_FILE) {
                                     doWriteFile(ec);
                                 }
                              });
