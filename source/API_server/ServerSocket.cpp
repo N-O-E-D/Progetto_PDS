@@ -59,6 +59,7 @@ void Session::readData(std::istream &stream)
         stream >> m_newName;
     if(m_messageType=="UPDATE" || m_messageType=="INSERT")
         stream >> m_fileSize;
+    //debug
     std::cout<< m_messageType<<std::endl;
     std::cout<< m_pathName<<std::endl;
     if(m_messageType=="UPDATE_NAME")
