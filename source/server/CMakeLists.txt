@@ -4,7 +4,7 @@ project(server)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS -pthread)
 
-add_executable(server main.cpp)
+add_executable(server main.cpp Server.cpp Server.h)
 
 # OpenSSL Libraries
 find_package(OpenSSL)
@@ -16,7 +16,7 @@ else()
 endif()
 
 # Boost Libraries
-find_package(Boost COMPONENTS system thread REQUIRED)
+find_package(Boost COMPONENTS system thread filesystem REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     target_link_libraries(server ${Boost_LIBRARIES})
