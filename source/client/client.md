@@ -1,15 +1,39 @@
 # Client
-### Istruzioni pe l'uso
+### Istruzioni per l'uso
 * La cartella contiene solo il CMakeList.txt, quindi prima di cominciare ricarare il cmake (tasto destro -> Reload Cmake Project).
-* Nel main ho scritto due test per controllare che Boost e OpenSSL funzionino.
+* Nel main ho scritto due test per controllare che Boost e OpenSSL funzionino.   
 
-### Todo
-* Due thread: uno per il FileWatcher e uno per comunicazione con server.
-* Modifica del FileWatcher con inserimento dei seguenti stati:
-    * FileCreated
-    * Erased
-    * FileModified
-    * DirCreated
-* Per ogni modifica rilevata inserisco in una coda path e status e risveglio il thread di comunicazione
-* Thread di comunicazione apre un socket e legge la coda: in base allo status chiama la corrispettiva funzione per inviare un messaggio al server.
-* Provare ad implementare gli status FileRenamed e DirRenamed 
+#### PRODUCER
+* Esegue File System Watcher che aggiunge le modifiche all'interno della coda;
+* All'inizializzazione, contatta il server per sapere quali file sono sincronizzati;
+* Di default non sincronizzati => quando riesco a contattare il server inserisco nella codae l'aggiunta/modifica dei file non ancora sincronizzati
+
+#### CONSUMER
+* Crea una comunicazione con il server e appena la apre manda il comando di sincronizzazione;
+* Processa le entry nella coda con la modifica corrispondente.
+* La entry va eliminata dalla coda solo in caso di successo.
+
+#### IMPLEMENTAZIONE
+* Classe con parametri:
+    * std::string path;
+    * Status pathStatus;
+* Coda thread safe che possa specializzarsi in questa classe;
+* Aggiunta dello stato di sincronizzazione all'interno della mappa del FSW;
+
+Coda thread safe => boost::lockfree::spsc_queue (grandezza limitata);
+
+Classe => std::pair<std::string, Status>;
+
+#####MAIN:
+1. Avviare File System Watcher (producer);
+2. Connessione con il server;
+3. Autenticazione;
+4. Sincornizzazione;
+5. Consumer;
+6. Gestione terminazione?
+
+Mappa thread safe per salvare i dati della sincronizzazione.
+
+### class PathStatusMap
+Thread Safe class wrapping a map that contains path as key and sync status as value.
+Constructor receive the root path and populates the map with all the sub paths, with the default value NotSynced 

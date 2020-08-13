@@ -4,16 +4,19 @@
 
 #include "FileSystemWatcher.h"
 
+#include <iostream>
+
 FileSystemWatcher::FileSystemWatcher(const std::string& path_to_watch, std::chrono::duration<int, std::milli> delay) : path_to_watch{path_to_watch}, delay{delay} {
     for(auto &file : std::filesystem::recursive_directory_iterator(path_to_watch))
         paths_[file.path().string()] = std::filesystem::last_write_time(file);
 }
 
 void FileSystemWatcher::start(const std::function<void(std::string, Status)> &action) {
+    std::cout<<"fw started/n";
     while(running_) {
+        std::cout<<"Running.../n";
         // Wait for "delay" milliseconds
         std::this_thread::sleep_for(delay);
-
         auto it = paths_.begin();
         while (it != paths_.end()) {
             if (!std::filesystem::exists(it->first)) {  // if path does not exist => file/dir2 erased

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <unordered_map>
 #include <thread>
+#include <functional>
 
 // Define all possible changes
 enum class Status { FileCreated, FileModified, Erased, DirCreated};
