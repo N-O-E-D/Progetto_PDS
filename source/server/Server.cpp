@@ -6,22 +6,62 @@
 
 using namespace boost::filesystem;
 
-int Server::add(){  //optare per due vesioni add(path,file) per aggiungere file e add(path) per aggiungere solo la directory
-    std::cout<<"add()"<<std::endl;
-}
+bool Server::update(std::string const& path){
 
-int Server::remove(){
-    std::cout<<"remove()"<<std::endl;
-}
+    std::cout<<"UPDATE"<<std::endl;
 
-int Server::remove_all(){
-    std::cout<<"remove_all()"<<std::endl;
 }
+bool Server::updateName(std::string const& path, std::string const& newName){
 
-int Server::rename() {
-    std::cout<<"rename()"<<std::endl;
+    const boost::filesystem::path oldp(path);
+    const boost::filesystem::path newp(newName);
+
+    std::cout<<"UPDATENAME"<<std::endl;
+
+    /*boost::system::error_code ec;
+    try{
+        rename(oldp, newp, ec);
+        if(ec){
+            std::cerr<<ec.message()<<std::endl;
+        }
+    }
+    catch(std::exception& e){
+        std::cerr << e.what() << std::endl;
+    }*/
+
 }
+bool Server::remove(std::string const& path){
 
-int Server::modify() {
-    std::cout<<"modify()"<<std::endl;
+    std::cout<<"REMOVE"<<std::endl;
+
+}
+bool Server::removeDir(std::string const& path){
+
+    std::cout<<"REMOVEDIR"<<std::endl;
+
+}
+bool Server::createFile(std::string const& path){
+
+    std::cout<<"CREATEFILE"<<std::endl;
+
+}
+bool Server::createDir(std::string const& path){
+
+    std::cout<<"CREATEDIR"<<std::endl;
+
+}
+bool Server::syncDir(std::string const& path){
+
+    std::cout<<"SYNCDIR"<<std::endl;
+
+}
+/*bool Server::syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len){
+
+    std::cout<<"SYNCFILE"<<std::endl;
+
+}*/
+bool Server::syncFile(std::string const& path){
+
+    std::cout<<"SYNCFILE"<<std::endl;
+
 }

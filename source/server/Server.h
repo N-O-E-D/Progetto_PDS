@@ -9,6 +9,7 @@
 #include <string>
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
+#include <boost/system/error_code.hpp>
 #include <boost/filesystem/operations.hpp>  //include boost::filesystem::path.hpp
 #include <boost/filesystem/fstream.hpp>
 #include <boost/shared_ptr.hpp>
@@ -18,11 +19,15 @@
 class Server {
 
 public:
-    int add();
-    int remove();
-    int remove_all();
-    int rename();
-    int modify();
+    bool update(std::string const& path);
+    bool updateName(std::string const& path, std::string const& newName);
+    bool remove(std::string const& path);
+    bool removeDir(std::string const& path);
+    bool createFile(std::string const& path);
+    bool createDir(std::string const& path);
+    bool syncDir(std::string const& path);
+    //bool syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
+    bool syncFile(std::string const& path);
 };
 
 
