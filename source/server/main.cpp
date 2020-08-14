@@ -35,14 +35,15 @@ std::map<std::string,std::string> users = {
 
 using boost::asio::ip::tcp;
 
-int selectComando(std::string& str, std::string& path){
+int selectComando(std::string& str, std::string& path, std::string& newpath){
+    str.pop_back();
+    str.pop_back();
     auto cmd = str.substr(0,str.find(" "));  //i comandi sono del tipo "UPDATE path", quindi prendo la sottostringa fino al primo spazio, quindi il comando
     str.erase(0,cmd.length()+1);
-    str.pop_back();
-    std::cout<<str<<std::endl;
     path = str.substr(0,str.find(" "));
-
-    std::cout<<path<<std::endl;
+    str.erase(0,path.length()+1);
+    newpath = str;
+    std::cout<<cmd<<" "<<path<<" "<<newpath<<std::endl;
     return commands[cmd];
 }
 
@@ -119,28 +120,32 @@ void handleSocket(int portnum){
                 //from streambuf to string
                 std::string recmex(boost::asio::buffers_begin(recmessage.data()),boost::asio::buffers_begin(recmessage.data())+recmessage.size());
                 std::string path;
-                switch (selectComando(recmex,path)) {
+                std::string newpath;
+                switch (selectComando(recmex,path,newpath)) {
                     case 1:
                         server.update(recmex);
                         break;
                     case 2:
-                        server.updateName(recmex,path);
+                        server.updateName(path,newpath);  //ok
                         break;
                     case 3:
-                        server.remove(recmex);
+                        server.remove(path);  //ok
                         break;
                     case 4:
-                        server.removeDir(recmex);
+                        server.removeDir(path);  //ok
                         break;
                     case 5:
                         server.createFile(recmex);
                         break;
                     case 6:
-                        server.createDir(recmex);
+                        server.createDir(path); //ok
+                        break;
                     case 7:
                         server.syncDir(recmex);
+                        break;
                     case 8:
                         server.syncFile(recmex);
+                        break;
                     default:
                         std::cout << "Comando errato" << std::endl;
                         break;
