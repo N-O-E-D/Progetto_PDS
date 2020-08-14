@@ -6,9 +6,33 @@
 
 using namespace boost::filesystem;
 
-bool Server::update(std::string const& path){
+bool Server::update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
 
     std::cout<<"UPDATE"<<std::endl;
+
+    //crea un file con nome uguale (ma con minima differenza per non rimpiazzare l'originale)
+    std::string tmpname(path+"tmp");
+    std::ofstream recfile(tmpname, std::ofstream::binary);
+
+    if(recfile.is_open()){
+        try{
+            recfile.write(recbuffer.data(),buffsize);
+        }
+        catch(std::exception& e){  //in caso di errore
+            std::cerr << "Write tmp file error: " << e.what() << std::endl;
+            remove(tmpname);  //rimuovi il file provvisorio
+            return false;
+        }
+        std::cout<<"Write tmp file success!"<<std::endl;
+        recfile.close();
+        //in caso di successo rimuovi il file vecchio e rinomina il file temporaneo
+        if(remove(path)){
+            updateName(tmpname,path);
+        }
+        return true;
+    }
+    std::cout<<"Error opening file "<<path<<std::endl;
+    return false;
 
 }
 
@@ -62,11 +86,27 @@ bool Server::removeDir(std::string const& path){  //se path è un file, rimuove 
 }
 
 
-
-bool Server::createFile(std::string const& path){
+bool Server::createFile(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
 
     std::cout<<"CREATEFILE"<<std::endl;
 
+    std::ofstream recfile(path, std::ofstream::binary);
+
+    if(recfile.is_open()){
+        try{
+            recfile.write(recbuffer.data(),buffsize);
+        }
+        catch(std::exception& e){  //in caso di errore
+            std::cerr << "Write file error: " << e.what() << std::endl;
+            remove(path);  //rimuovi il file provvisorio
+            return false;
+        }
+        std::cout<<"Write file success!"<<std::endl;
+        recfile.close();
+        return true;
+    }
+    std::cout<<"Error opening file "<<path<<std::endl;
+    return false;
 }
 
 bool Server::createDir(std::string const& path){

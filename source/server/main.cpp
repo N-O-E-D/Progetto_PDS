@@ -16,6 +16,9 @@
 //create a Server object (provides ADD, MODIFY, REMOVE methods)
 Server server;
 
+std::vector<char> bufferprova = {'c','i','a','o'};
+ssize_t buffsize = bufferprova.size();
+
 std::map<std::string,int> commands = {
         {"UPDATE",1},
         {"UPDATENAME",2},
@@ -123,7 +126,7 @@ void handleSocket(int portnum){
                 std::string newpath;
                 switch (selectComando(recmex,path,newpath)) {
                     case 1:
-                        server.update(recmex);
+                        server.update(path, bufferprova, buffsize);  //ok
                         break;
                     case 2:
                         server.updateName(path,newpath);  //ok
@@ -135,7 +138,7 @@ void handleSocket(int portnum){
                         server.removeDir(path);  //ok
                         break;
                     case 5:
-                        server.createFile(recmex);
+                        server.createFile(path, bufferprova, buffsize);  //ok
                         break;
                     case 6:
                         server.createDir(path); //ok
