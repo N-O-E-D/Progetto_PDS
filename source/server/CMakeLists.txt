@@ -4,7 +4,8 @@ project(server)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS -pthread)
 
-add_executable(server main.cpp Server.cpp Server.h)
+include_directories(../../HashExecutor)
+add_executable(server main.cpp Server.cpp Server.h ../../HashExecutor/HashExecutor.cpp ../../HashExecutor/HashExecutor.h)
 
 # OpenSSL Libraries
 find_package(OpenSSL)

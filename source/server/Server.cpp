@@ -130,16 +130,34 @@ bool Server::syncDir(std::string const& path){
 
     std::cout<<"SYNCDIR"<<std::endl;
 
+    const boost::filesystem::path p(path);
+
+    if(boost::filesystem::exists(p)) {
+        std::cout<<"Il path esiste!"<<std::endl;
+        return true;
+    }
+    std::cout<<"Il path non esiste!"<<std::endl;
+    return false;
 }
 
-/*bool Server::syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len){
+bool Server::syncFile(std::string const& path, unsigned char* md_value, unsigned int md_len) {
 
-    std::cout<<"SYNCFILE"<<std::endl;
+    std::cout << "SYNCFILE" << std::endl;
 
-}*/
+    const boost::filesystem::path p(path);
 
-bool Server::syncFile(std::string const& path){
+    //hash di <path>
+    unsigned char md_value_path[EVP_MAX_MD_SIZE];
+    unsigned int md_len_path = computeHash(path, md_value_path);
 
-    std::cout<<"SYNCFILE"<<std::endl;
-
+    if (boost::filesystem::exists(p)) {
+        if (compareHash(md_value, md_value_path, md_len)) {
+            std::cout << "Hash uguali" << std::endl;
+            return true;
+        }
+        std::cout << "Hash non uguali" << std::endl;
+        return false;
+    }
+    std::cout<<"Il path non esiste"<<std::endl;
+    return false;
 }

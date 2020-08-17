@@ -5,6 +5,7 @@
 #ifndef PROVA_SOCKET_ASIO_SERVER_H
 #define PROVA_SOCKET_ASIO_SERVER_H
 
+#include "../../HashExecutor/HashExecutor.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -30,8 +31,7 @@ public:
     bool createFile(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize);
     bool createDir(std::string const& path);
     bool syncDir(std::string const& path);
-    //bool syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
-    bool syncFile(std::string const& path);
+    bool syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
 };
 
 

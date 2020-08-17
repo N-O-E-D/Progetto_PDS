@@ -1,3 +1,5 @@
+
+#include "../../HashExecutor/HashExecutor.h"
 #include <ctime>
 #include <iostream>
 #include <string>
@@ -124,6 +126,11 @@ void handleSocket(int portnum){
                 std::string recmex(boost::asio::buffers_begin(recmessage.data()),boost::asio::buffers_begin(recmessage.data())+recmessage.size());
                 std::string path;
                 std::string newpath;
+
+                //hash di un file a caso
+                unsigned char md_value[EVP_MAX_MD_SIZE];
+                unsigned int md_len = computeHash("../CMakeLists.txt", md_value);
+                
                 switch (selectComando(recmex,path,newpath)) {
                     case 1:
                         server.update(path, bufferprova, buffsize);  //ok
@@ -144,10 +151,10 @@ void handleSocket(int portnum){
                         server.createDir(path); //ok
                         break;
                     case 7:
-                        server.syncDir(recmex);
+                        server.syncDir(path);  //ok
                         break;
                     case 8:
-                        server.syncFile(recmex);
+                        server.syncFile(path,md_value,md_len);
                         break;
                     default:
                         std::cout << "Comando errato" << std::endl;
