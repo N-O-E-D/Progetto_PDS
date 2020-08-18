@@ -6,14 +6,14 @@
 #include <string>
 #include <memory>
 #include <boost/asio.hpp>
-
+#include "../server/Server.h"
 class Session
         : public std::enable_shared_from_this<Session>
 {
 public:
     using TcpSocket = boost::asio::ip::tcp::socket;
 
-    Session(TcpSocket t_socket);
+    Session(TcpSocket t_socket, Server server);
 
     void start()
     {
@@ -39,6 +39,7 @@ private:
     std::string m_newName;
     std::string m_mdvalue;
     std::vector<char> m_file;
+    Server m_server;
 };
 
 
@@ -49,7 +50,7 @@ public:
     using TcpAcceptor = boost::asio::ip::tcp::acceptor;
     using IoService = boost::asio::io_service;
 
-    ServerSocket(IoService& t_ioService, short t_port, std::string const& t_workDirectory);
+    ServerSocket(IoService& t_ioService, short t_port, std::string const& t_workDirectory, Server& server);
 
 private:
     void doAccept();
@@ -57,6 +58,6 @@ private:
 
     TcpSocket m_socket;
     TcpAcceptor m_acceptor;
-
-    std::string m_workDirectory;
+    Server m_server;
+    //std::string m_workDirectory;
 };

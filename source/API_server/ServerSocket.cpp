@@ -6,56 +6,10 @@
 
 #include "ServerSocket.h"
 
-/*-----------------------------------------*/
-#include <string>
-#include <array>
-#include <openssl/evp.h>
-#include <stdio.h>
-#include <string>
-#include <iostream>
-#include <unistd.h>
-#define BUF_SIZE 1024
 
-unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
-    EVP_MD_CTX *md;
-    //unsigned char md_value[EVP_MAX_MD_SIZE];
-
-    int n,i;
-    unsigned int md_len;
-    unsigned char buf[BUF_SIZE];
-    FILE *fin;
-
-    if((fin = fopen(path.data(),"r")) == NULL) {
-        std::cout<<"Couldnt open input file, try again\n";
-        exit(1);
-    }
-
-    md = EVP_MD_CTX_new();
-    EVP_MD_CTX_init(md);
-    EVP_DigestInit(md, EVP_sha1());
-    while((n = fread(buf,1,BUF_SIZE,fin)) > 0)
-        EVP_DigestUpdate(md, buf,n);
-
-    if(EVP_DigestFinal_ex(md, md_value, &md_len) != 1) {
-        printf("Digest computation problem\n");
-        exit(1);
-    }
-    printf("The digest is: ");
-    for(i = 0; i < md_len; i++)
-        printf("%02x", md_value[i]);
-    printf("\n");
-    EVP_MD_CTX_free(md);
-    return md_len;
-}
-
-bool compareHash(unsigned char md_value1[],unsigned char md_value2[], int md_len){
-    if(CRYPTO_memcmp(md_value1, md_value2, md_len)!=0)
-        return false;
-    return true;
-}
-/*-----------------------------------------*/
-Session::Session(TcpSocket t_socket)
-        : m_socket(std::move(t_socket))
+Session::Session(TcpSocket t_socket,Server server)
+        : m_socket(std::move(t_socket)),
+        m_server(server)
 {
 }
 
@@ -92,6 +46,23 @@ void Session::processRead(size_t t_bytesTransferred)
                                          doReadFileContent(bytes);
                                  });
     }
+    //ora che ho tutti i dati ricevuti dal client richiamo le funzioni fornite dalla classe Server a seconda dell'azione
+    if (m_messageType=="UPDATE")
+        m_server.update(m_pathName,m_file,m_fileSize);
+    if (m_messageType=="UPDATE_NAME")
+        m_server.updateName(m_pathName,m_newName);
+    if (m_messageType=="REMOVE")
+        m_server.remove(m_pathName);
+    if (m_messageType=="REMOVE_DIR")
+        m_server.removeDir(m_pathName);
+    if (m_messageType=="CREATE_FILE")
+        m_server.createFile(m_pathName,m_file,m_fileSize);
+    if (m_messageType=="CREATE_DIR")
+        m_server.createDir(m_pathName);
+    if (m_messageType=="SYNC_DIR")
+        m_server.syncDir(m_pathName);
+    if (m_messageType=="SYNC_FILE")
+        m_server.syncFile(m_pathName,(unsigned char*) m_mdvalue.data(),(unsigned int)m_mdvalue.size());
 
 }
 
@@ -106,13 +77,9 @@ void Session::readData(std::istream &stream)
         stream >> m_newName;
     if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE")
         stream >> m_fileSize;
-    if (m_messageType=="SYNC_FILE"){
+    if (m_messageType=="SYNC_FILE")
         stream >> m_mdvalue;
-        //debug
-        unsigned char md_value[EVP_MAX_MD_SIZE];
-        unsigned int md_len=computeHash("/home/lorenzo/Scrivania/gg.txt",md_value);
-        std::cout<<compareHash(md_value,reinterpret_cast<unsigned char*>(m_mdvalue.data()),md_len)<<std::endl;
-    }
+        
     //debug
     std::cout<< m_messageType<<std::endl;
     std::cout<< m_pathName<<std::endl;
@@ -155,14 +122,15 @@ void Session::handleError(std::string const& t_functionName, boost::system::erro
 }
 
 
-ServerSocket::ServerSocket(IoService& t_ioService, short t_port, std::string const& t_workDirectory)
+ServerSocket::ServerSocket(IoService& t_ioService, short t_port, std::string const& t_workDirectory, Server& server)
         : m_socket(t_ioService),
           m_acceptor(t_ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), t_port)),
-          m_workDirectory(t_workDirectory)
+          //m_workDirectory(t_workDirectory),
+          m_server(server)
 {
     std::cout << "Server started\n";
 
-    createWorkDirectory();
+    //createWorkDirectory();
 
     doAccept();
 }
@@ -174,18 +142,18 @@ void ServerSocket::doAccept()
                             [this](boost::system::error_code ec)
                             {
                                 if (!ec)
-                                    std::make_shared<Session>(std::move(m_socket))->start();
+                                    std::make_shared<Session>(std::move(m_socket),std::move(m_server))->start();
 
                                 doAccept();
                             });
 }
 
 
-void ServerSocket::createWorkDirectory()
+/*void ServerSocket::createWorkDirectory()
 {
     using namespace boost::filesystem;
     auto currentPath = path(m_workDirectory);
     if (!exists(currentPath) && !create_directory(currentPath))
         BOOST_LOG_TRIVIAL(error) << "Coudn't create working directory: " << m_workDirectory;
     current_path(currentPath);
-}
+}*/
