@@ -3,7 +3,7 @@
 Write here information about this part of the project
 
 ###Esempio di utilizzo
-`    
+```
  
          try {
          boost::asio::io_service ioService;
@@ -16,7 +16,7 @@ Write here information about this part of the project
      }
  
      return 0; }
-
+```
 
 # todo
 * Implementare messagi di risposta del server verso il client
