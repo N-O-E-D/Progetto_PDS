@@ -27,8 +27,7 @@ private:
     void readData(std::istream &stream);
     void doReadFileContent(size_t t_bytesTransferred);
     void handleError(std::string const& t_functionName, boost::system::error_code const& t_ec);
-
-
+    void manageMessage(std::string const& messageType);
     TcpSocket m_socket;
     std::vector<char> m_buf;
     boost::asio::streambuf m_requestBuf_;
@@ -50,14 +49,12 @@ public:
     using TcpAcceptor = boost::asio::ip::tcp::acceptor;
     using IoService = boost::asio::io_service;
 
-    ServerSocket(IoService& t_ioService, short t_port, std::string const& t_workDirectory, Server& server);
+    ServerSocket(IoService& t_ioService, short t_port, Server& server);
 
 private:
     void doAccept();
-    void createWorkDirectory();
-
     TcpSocket m_socket;
     TcpAcceptor m_acceptor;
     Server m_server;
-    //std::string m_workDirectory;
+
 };

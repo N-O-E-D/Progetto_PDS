@@ -32,7 +32,9 @@ private:
     void doConnect();
     void doWriteFile(const boost::system::error_code& t_ec);
     template<class Buffer>
-    void writeBuffer(Buffer& t_buffer);
+    void writeHeader(Buffer& t_buffer);
+    template<class Buffer>
+    void writeFileContent(Buffer& t_buffer);
     void buildHeader(messageType mt);
 
     TcpResolver m_ioService;

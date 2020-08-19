@@ -7,14 +7,11 @@
 #include "ClientSocket.h"
 
 
-ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator
-               /*,std::string const& t_path*/)
-        : m_ioService(t_ioService), m_socket(t_ioService),
-          m_endpointIterator(t_endpointIterator)/*, m_path(t_path)*/
-{
-    //doConnect();
-    //openFile(m_path);
-}
+ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator):
+                            m_ioService(t_ioService),
+                            m_socket(t_ioService),
+                            m_endpointIterator(t_endpointIterator)
+                            {}
 
 
 void ClientSocket::openFile(std::string const& t_path)
@@ -37,7 +34,11 @@ void ClientSocket::doConnect()
                                {
                                    if (!ec) {
                                        //invio l'header
-                                       writeBuffer(m_request);
+                                       writeHeader(m_request);
+                                       //controllo anche se devo inviare il contenuto di un file
+                                       if(m_messageType==UPDATE || m_messageType==CREATE_FILE)
+                                           doWriteFile(ec);
+
                                    } else {
                                        std::cout << "Couldn't connect to host. Please run server "
                                                     "or check network connection.\n";
@@ -64,7 +65,7 @@ void ClientSocket::doWriteFile(const boost::system::error_code& t_ec)
             BOOST_LOG_TRIVIAL(trace) << ss.str();
             std::cout<<m_buf.data()<<std::endl;
             auto buf = boost::asio::buffer(m_buf.data(), static_cast<size_t>(m_sourceFile.gcount()));
-            writeBuffer(buf);
+            writeFileContent(buf);
         }
     } else {
         BOOST_LOG_TRIVIAL(error) << "Error: " << t_ec.message();
@@ -169,15 +170,24 @@ void ClientSocket::syncFile(std::string const& path,unsigned char* md_value,unsi
     doConnect();
 }
 template<class Buffer>
-void ClientSocket::writeBuffer(Buffer& t_buffer)
+void ClientSocket::writeHeader(Buffer& t_buffer)
 {
     boost::asio::async_write(m_socket,
                              t_buffer,
                              [this](boost::system::error_code ec, size_t )
                              {
-                                std::cout<<"file inviato"<<std::endl;
-                                if(m_messageType==UPDATE || m_messageType==CREATE_FILE) {
-                                    doWriteFile(ec);
-                                }
+                                std::cout<<"header inviato"<<std::endl;
+                                });
+                             };
+
+template<class Buffer>
+void ClientSocket::writeFileContent(Buffer& t_buffer)
+{
+    boost::asio::async_write(m_socket,
+                             t_buffer,
+                             [this](boost::system::error_code ec, size_t )
+                             {
+                                 std::cout<<"file inviato"<<std::endl;
                              });
-}
+    };
+

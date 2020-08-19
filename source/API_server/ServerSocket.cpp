@@ -37,33 +37,17 @@ void Session::processRead(size_t t_bytesTransferred)
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
     if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
-        std::cout<<"dentro"<<std::endl;
+        std::cout<<"Sto leggendo il contenuto del file..."<<std::endl;
         auto self = shared_from_this();
         m_buf.resize(m_fileSize);
+        std::cout << "dimensione buffer : " << m_buf.size()<<std::endl;
         m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_fileSize),
                                  [this, self](boost::system::error_code ec, size_t bytes) {
                                      if (!ec)
                                          doReadFileContent(bytes);
                                  });
     }
-    //ora che ho tutti i dati ricevuti dal client richiamo le funzioni fornite dalla classe Server a seconda dell'azione
-    if (m_messageType=="UPDATE")
-        m_server.update(m_pathName,m_file,m_fileSize);
-    if (m_messageType=="UPDATE_NAME")
-        m_server.updateName(m_pathName,m_newName);
-    if (m_messageType=="REMOVE")
-        m_server.remove(m_pathName);
-    if (m_messageType=="REMOVE_DIR")
-        m_server.removeDir(m_pathName);
-    if (m_messageType=="CREATE_FILE")
-        m_server.createFile(m_pathName,m_file,m_fileSize);
-    if (m_messageType=="CREATE_DIR")
-        m_server.createDir(m_pathName);
-    if (m_messageType=="SYNC_DIR")
-        m_server.syncDir(m_pathName);
-    if (m_messageType=="SYNC_FILE")
-        m_server.syncFile(m_pathName,(unsigned char*) m_mdvalue.data(),(unsigned int)m_mdvalue.size());
-
+    else manageMessage(m_messageType);
 }
 
 
@@ -104,16 +88,36 @@ void Session::doReadFileContent(size_t t_bytesTransferred)
     if (t_bytesTransferred > 0) {
        m_file.insert(m_file.end(),m_buf.begin(),m_buf.end());
     }
+    std::cout<<"ho ricevuto questo file: "<<std::endl;
     for (int i=0;i<m_file.size();i++)
         std::cout<<m_file.at(i);
-    auto self = shared_from_this();
-    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_fileSize),
-                             [this, self](boost::system::error_code ec, size_t bytes)
-                             {
-                                 doReadFileContent(bytes);
-                             });
-}
 
+    manageMessage(m_messageType);
+
+}
+void Session::manageMessage(std::string const& messageType){
+    std::cout<<"Invio al server "<<messageType<<std::endl;
+    //ora che ho tutti i dati ricevuti dal client richiamo le funzioni fornite dalla classe Server a seconda dell'azione
+    if (m_messageType=="UPDATE")
+        m_server.update(m_pathName,m_file,m_fileSize);
+    if (m_messageType=="UPDATE_NAME")
+        m_server.updateName(m_pathName,m_newName);
+    if (m_messageType=="REMOVE")
+        m_server.remove(m_pathName);
+    if (m_messageType=="REMOVE_DIR")
+        m_server.removeDir(m_pathName);
+    if (m_messageType=="CREATE_FILE")
+        m_server.createFile(m_pathName,m_file,m_fileSize);
+    if (m_messageType=="CREATE_DIR")
+        m_server.createDir(m_pathName);
+    if (m_messageType=="SYNC_DIR")
+        m_server.syncDir(m_pathName);
+    if (m_messageType=="SYNC_FILE")
+        m_server.syncFile(m_pathName,(unsigned char*) m_mdvalue.data(),(unsigned int)m_mdvalue.size());
+
+
+
+}
 
 void Session::handleError(std::string const& t_functionName, boost::system::error_code const& t_ec)
 {
@@ -122,15 +126,12 @@ void Session::handleError(std::string const& t_functionName, boost::system::erro
 }
 
 
-ServerSocket::ServerSocket(IoService& t_ioService, short t_port, std::string const& t_workDirectory, Server& server)
+ServerSocket::ServerSocket(IoService& t_ioService, short t_port, Server& server)
         : m_socket(t_ioService),
           m_acceptor(t_ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), t_port)),
-          //m_workDirectory(t_workDirectory),
           m_server(server)
 {
     std::cout << "Server started\n";
-
-    //createWorkDirectory();
 
     doAccept();
 }
@@ -147,13 +148,3 @@ void ServerSocket::doAccept()
                                 doAccept();
                             });
 }
-
-
-/*void ServerSocket::createWorkDirectory()
-{
-    using namespace boost::filesystem;
-    auto currentPath = path(m_workDirectory);
-    if (!exists(currentPath) && !create_directory(currentPath))
-        BOOST_LOG_TRIVIAL(error) << "Coudn't create working directory: " << m_workDirectory;
-    current_path(currentPath);
-}*/

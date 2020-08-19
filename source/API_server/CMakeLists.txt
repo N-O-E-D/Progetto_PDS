@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(api_server)
 
 set(CMAKE_CXX_STANDARD 17)
-
-add_executable(api_server main.cpp ServerSocket.cpp ServerSocket.h ../server/Server.h ../server/Server.cpp)
+#include_directories(../../HashExecutor)
+add_executable(api_server main.cpp ServerSocket.cpp ServerSocket.h ../server/Server.h ../server/Server.cpp ../../HashExecutor/HashExecutor.cpp ../../HashExecutor/HashExecutor.h)
 
 # OpenSSL Libraries
 find_package(OpenSSL)

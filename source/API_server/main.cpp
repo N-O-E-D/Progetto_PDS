@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     try {
         boost::asio::io_service ioService;
         Server server;
-        ServerSocket serverSocket(ioService, std::stoi(argv[1]), argv[2],server);
+        ServerSocket serverSocket(ioService, std::stoi(argv[1]), server);
 
         ioService.run();
     } catch (std::exception& e) {
