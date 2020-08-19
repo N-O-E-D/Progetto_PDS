@@ -14,6 +14,7 @@
 #include <boost/iterator.hpp>
 #include <boost/cstdint.hpp>
 #include "Server.h"
+#include "../API_server/ServerSocket.h"
 
 //create a Server object (provides ADD, MODIFY, REMOVE methods)
 Server server;
@@ -78,6 +79,7 @@ bool autentica(boost::asio::streambuf& recmessage){
 
 }
 
+/*
 void handleSocket(int portnum){
     try
     {
@@ -130,7 +132,7 @@ void handleSocket(int portnum){
                 //hash di un file a caso
                 unsigned char md_value[EVP_MAX_MD_SIZE];
                 unsigned int md_len = computeHash("../CMakeLists.txt", md_value);
-                
+
                 switch (selectComando(recmex,path,newpath)) {
                     case 1:
                         server.update(path, bufferprova, buffsize);  //ok
@@ -173,7 +175,7 @@ void handleSocket(int portnum){
     return;
 }
 
-
+*/
 
 int main()
 {
