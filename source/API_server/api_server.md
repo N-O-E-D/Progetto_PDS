@@ -22,3 +22,4 @@ Write here information about this part of the project
 Implementare messagi di risposta del server verso il client
 Modificare costruttore ServerSocket
 Risolvere problemi sull'invio del file
+Risolvere problemi anche sulla remove (header)
