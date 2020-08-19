@@ -7,8 +7,8 @@ Write here information about this part of the project
  
          try {
          boost::asio::io_service ioService;
- 
-         ServerSocket server(ioService, <porta>, <path cartella>);
+         Server s;
+         ServerSocket server(ioService, <porta>, s);
  
          ioService.run();
      } catch (std::exception& e) {
