@@ -116,6 +116,7 @@ void ClientSocket::update(const std::string &path) {
     openFile(m_path);
     buildHeader(UPDATE);
     doConnect();
+    waitResponse(UPDATE);
 }
 void ClientSocket::updateName(const std::string &path,std::string const& newName) {
     m_path=path;
@@ -123,18 +124,21 @@ void ClientSocket::updateName(const std::string &path,std::string const& newName
     m_newName=newName;
     buildHeader(UPDATE_NAME);
     doConnect();
+    waitResponse(UPDATE_NAME);
 }
 void ClientSocket::remove(const std::string &path) {
     m_path=path;
     m_messageType=REMOVE;
     buildHeader(REMOVE);
     doConnect();
+    waitResponse(REMOVE);
 }
 void ClientSocket::removeDir(const std::string &path) {
     m_path=path;
     m_messageType=REMOVE_DIR;
     buildHeader(REMOVE_DIR);
     doConnect();
+    waitResponse(REMOVE_DIR);
 }
 void ClientSocket::createFile(const std::string &path) {
     m_path=path;
@@ -142,22 +146,26 @@ void ClientSocket::createFile(const std::string &path) {
     openFile(m_path);
     buildHeader(CREATE_FILE);
     doConnect();
+    waitResponse(CREATE_FILE);
 }
 void ClientSocket::createDir(const std::string &path) {
     m_path=path;
     m_messageType=CREATE_DIR;
     buildHeader(CREATE_DIR);
     doConnect();
+    waitResponse(CREATE_DIR);
 }
 void ClientSocket::syncDir(std::string const& path){
     m_path=path;
     m_messageType=SYNC_DIR;
     buildHeader(SYNC_DIR);
     doConnect();
+    waitResponse(SYNC_DIR);
 }
 void ClientSocket::syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len){
     m_path=path;
     m_messageType=SYNC_FILE;
+    m_mdlen=md_len;
     printf("digest: ");
     for(int i = 0; i < md_len; i++)
         printf("%02x", md_value[i]);
@@ -168,6 +176,7 @@ void ClientSocket::syncFile(std::string const& path,unsigned char* md_value,unsi
         printf("%02x", (unsigned char)sName[i]);
     buildHeader(SYNC_FILE);
     doConnect();
+    waitResponse(SYNC_FILE);
 }
 template<class Buffer>
 void ClientSocket::writeHeader(Buffer& t_buffer)
@@ -188,6 +197,66 @@ void ClientSocket::writeFileContent(Buffer& t_buffer)
                              [this](boost::system::error_code ec, size_t )
                              {
                                  std::cout<<"file inviato"<<std::endl;
+
                              });
     };
 
+void ClientSocket::waitResponse (messageType mt){
+    async_read_until(m_socket, m_response, "\n\n",
+                     [this,mt](boost::system::error_code ec, size_t bytes)
+                     {
+                         if (!ec)
+                             processResponse(bytes,mt);
+                         else
+                             std::cout<<"errore in waitResponse"<<std::endl;
+                     });
+}
+void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt){
+    std::istream responseStream(&m_response);
+    responseStream >> m_responseType;
+    analyzeResponse(m_responseType,mt);
+}
+void ClientSocket::analyzeResponse(std::string response, messageType mt){
+    if (response=="OK")
+        std::cout<<"Server ha risposto con OK , tutto è andato a buon fine"<<std::endl;
+    if (response=="INTERNAL_ERROR") { //ritento
+        std::cout<<"Server ha risposto con internal error. Qaulcosa è andato stroto , ritento"<<std::endl;
+        switch (mt){
+            case UPDATE:
+                update(m_path);
+                break;
+            case UPDATE_NAME:
+                updateName(m_path,m_newName);
+                break;
+            case REMOVE:
+                remove(m_path);
+                break;
+            case REMOVE_DIR:
+                removeDir(m_path);
+                break;
+            case CREATE_FILE:
+                createFile(m_path);
+                break;
+            case CREATE_DIR:
+                createDir(m_path);
+                break;
+            case SYNC_FILE:
+                syncFile(m_path,reinterpret_cast<unsigned char*>(m_mdvalue.data()),m_mdlen);
+                break;
+            case SYNC_DIR:
+                syncDir(m_path);
+                break;
+        }
+    }
+    if (response=="NOT_PRESENT"){
+        std::cout<<"Server ha risposto con not present"<<std::endl;
+        if(mt==SYNC_FILE)
+            createFile(m_path);
+        if(mt==SYNC_DIR)
+            createDir(m_path);
+    }
+    if (response=="OLD_VERSION") {
+        std::cout<<"Server ha risposto con old version"<<std::endl;
+        update(m_path);
+    }
+}
