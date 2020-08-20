@@ -36,6 +36,9 @@ private:
     template<class Buffer>
     void writeFileContent(Buffer& t_buffer);
     void buildHeader(messageType mt);
+    void waitResponse(messageType mt);
+    void processResponse(size_t t_bytesTransferred,messageType mt);
+    void analyzeResponse(std::string response,messageType mt);
 
     TcpResolver m_ioService;
     TcpSocket m_socket;
@@ -46,7 +49,10 @@ private:
     std::string m_path;
     std::string m_newName;
     std::string m_mdvalue;
+    unsigned int m_mdlen;
     messageType m_messageType;
+    boost::asio::streambuf m_response;
+    std::string m_responseType;
     int m_fileSize;
 
 };
