@@ -25,7 +25,7 @@ public:
     void createFile(std::string const& path);
     void createDir(std::string const& path);
     void syncDir(std::string const& path);
-    void syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
+    void syncFile(std::string const& path);
 
 private:
     void openFile(std::string const& t_path);

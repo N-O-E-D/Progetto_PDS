@@ -5,6 +5,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "ClientSocket.h"
+#include "../../HashExecutor/HashExecutor.h"
 
 
 ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator):
@@ -162,9 +163,14 @@ void ClientSocket::syncDir(std::string const& path){
     doConnect();
     waitResponse(SYNC_DIR);
 }
-void ClientSocket::syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len){
+void ClientSocket::syncFile(std::string const& path){
     m_path=path;
     m_messageType=SYNC_FILE;
+
+    // Compute hash
+    unsigned char md_value[EVP_MAX_MD_SIZE];
+    unsigned int md_len=computeHash(path, md_value);
+
     m_mdlen=md_len;
     printf("digest: ");
     for(int i = 0; i < md_len; i++)

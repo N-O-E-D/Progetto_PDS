@@ -44,94 +44,76 @@ int main() {
     // 1. Start File System Watcher
     std::thread t1{fileSystemWatcher};
 
-    // 2. Connect to the server
-    //boost::asio::io_service ioService;
-    //boost::asio::ip::tcp::resolver resolver(ioService);
-    //auto endpointIterator = resolver.resolve({ address, port });
-    //ClientSocket socket(ioService, endpointIterator);
-    // 3. Authentication
+    // 2. Synchronization -> problem with async communication
+    pathSyncStatus.iterate_map([address, port] (const std::pair<std::string,SyncStatus>& path) -> void {
+        // 2.1 If already synced return
+        if( path.second == SyncStatus::Synced ) return;
 
-    // 4. Synchronization
-//    pathSyncStatus.iterate_map([&ioService,&socket] (const std::pair<std::string,SyncStatus>& path) -> void {
-//        std::cout << "Checking: " << path.first << std::endl;
-//        bool synced;
-//        if( std::filesystem::is_directory(std::filesystem::path(path.first)) )
-//            socket.syncDir(path.first); // messaggio di ritorno da parte del server: true/false
-////        else
-////            socket.syncFile(path.first);
-//        ioService.run();
-//        if(synced) pathSyncStatus.setSynced(path.first);
-//    });
-//
-//    pathSyncStatus.iterate_map([&ioService,&socket] (const std::pair<std::string,SyncStatus>& path) -> void {
-//        // tutto ciò non sincronizzato va inviato... Update/Remove/Add/AddDir
-//        if(path.second == SyncStatus::Synced) return;
-//    });
+        // 2.2 Open socket
+        boost::asio::io_service ioService;
+        boost::asio::ip::tcp::resolver resolver(ioService);
+        auto endpointIterator = resolver.resolve({ address, port });
+        ClientSocket socket(ioService, endpointIterator);
 
-    // 5. Consumer process
+        // 2.3 If not synced, do it
+        if( std::filesystem::is_directory(std::filesystem::path(path.first)) )
+            socket.syncDir(path.first);
+        else
+            socket.syncFile(path.first);
+
+        pathSyncStatus.setSynced(path.first);
+    });
+
+    // 3. Consumer process
     std::pair<std::string, Status> path;
     while(true){
-
         if(path_to_process.pop(path)){
+            // 3.1 Open socket
             boost::asio::io_service ioService;
             boost::asio::ip::tcp::resolver resolver(ioService);
             auto endpointIterator = resolver.resolve({ address, port });
             ClientSocket socket(ioService, endpointIterator);
-            std::cout<<"Path popped\n";
-            bool done = false;
-            //while(!done){
-                std::cout<<"Into the done loop\n";
-                try{
-                    std::cout<<"Into try\n";
-                    switch(path.second) {
-                        case Status::FileCreated:
-                            std::cout << "File created: " << path.first << '\n';
-                            // Update server
-                            socket.createFile(path.first);
-                            ioService.run();
-                            // set sync status as synced
-                            pathSyncStatus.setSynced(path.first);
-                            // break the loop
-                            done = true;
-                            break;
-                        case Status::FileModified:
-                            std::cout << "File modified: " << path.first << '\n';
-                            // Update server
-                            socket.update(path.first);
-                            ioService.run();
-                            // set sync status as synced
-                            pathSyncStatus.setSynced(path.first);
-                            // break the loop
-                            done = true;
-                            break;
-                        case Status::Erased:
-                            std::cout << "File or Directory erased: " << path.first << '\n';
-                            // Update server
-                            /*AGGIUNTA DI LORENZO : MANCAVA DISCRIMINAZIONE TRA FILE E DIRECTORY */
-                            socket.remove(path.first);
-                            ioService.run();
-                            // set sync status as synced
-                            pathSyncStatus.remove(path.first);
-                            // break the loop
-                            done = true;
-                            break;
-                        case Status::DirCreated:
-                            std::cout << "Directory created: " << path.first << '\n';
-                            // Update server
-                            socket.createDir(path.first);
-                            ioService.run();
-                            // set sync status as synced
-                            pathSyncStatus.setSynced(path.first);
-                            // break the loop
-                            done = true;
-                            break;
-                        default:
-                            std::cout << "Error! Unknown file status.\n";
-                            done = true;
-                    }
-                } catch (std::exception& e){
-                    std::cout << e.what() << std::endl;
-                //}
+
+            // 3.2 Send the corresponding message
+            try{
+                switch(path.second) {
+                    case Status::FileCreated:
+                        std::cout << "File created: " << path.first << '\n';
+                        // Update server
+                        socket.createFile(path.first);
+                        ioService.run();
+                        // set sync status as synced
+                        pathSyncStatus.setSynced(path.first);
+                        break;
+                    case Status::FileModified:
+                        std::cout << "File modified: " << path.first << '\n';
+                        // Update server
+                        socket.update(path.first);
+                        ioService.run();
+                        // set sync status as synced
+                        pathSyncStatus.setSynced(path.first);
+                        break;
+                    case Status::Erased:
+                        std::cout << "File or Directory erased: " << path.first << '\n';
+                        // Update server
+                        socket.remove(path.first);
+                        ioService.run();
+                        // set sync status as synced
+                        pathSyncStatus.remove(path.first);
+                        break;
+                    case Status::DirCreated:
+                        std::cout << "Directory created: " << path.first << '\n';
+                        // Update server
+                        socket.createDir(path.first);
+                        ioService.run();
+                        // set sync status as synced
+                        pathSyncStatus.setSynced(path.first);
+                        break;
+                    default:
+                        std::cout << "Error! Unknown file status.\n";
+                }
+            } catch (std::exception& e){
+                std::cout << e.what() << std::endl;
             }
         }
     }

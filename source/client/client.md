@@ -26,9 +26,7 @@ Classe => std::pair<std::string, Status>;
 
 #####MAIN:
 1. Avviare File System Watcher (producer);
-2. Connessione con il server;
-3. Autenticazione;
-4. Sincornizzazione;
+2. Sincornizzazione;
 5. Consumer;
 6. Gestione terminazione?
 
@@ -36,4 +34,10 @@ Mappa thread safe per salvare i dati della sincronizzazione.
 
 ### class PathStatusMap
 Thread Safe class wrapping a map that contains path as key and sync status as value.
-Constructor receive the root path and populates the map with all the sub paths, with the default value NotSynced 
+Constructor receive the root path and populates the map with all the sub paths, with the default value NotSynced
+
+### TODO
+* aggionrare struttura dati dopo comunicazione asincrona -> handler?
+* gestire la saturazione della coda -> tengo le 1024 modifche più recenti e prima di eseguirle faccio sincornizzazione
+* autenticazione 
+* sistemazione del codice 
