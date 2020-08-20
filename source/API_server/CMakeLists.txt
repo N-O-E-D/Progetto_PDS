@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(api_server main.cpp ServerSocket.cpp ServerSocket.h ../server/Server.h ../server/Server.cpp ../../HashExecutor/HashExecutor.cpp ../../HashExecutor/HashExecutor.h)
 
 # OpenSSL Libraries
+#set(OPENSSL_ROOT_DIR /usr/local/Cellar/openssl@1.1/1.1.1g) #for OpenSSL installed with brew on macOS
 find_package(OpenSSL)
 if(OpenSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
