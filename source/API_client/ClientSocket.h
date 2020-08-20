@@ -5,7 +5,7 @@
 
 #include <boost/asio.hpp>
 enum messageType{
-    UPDATE,UPDATE_NAME,REMOVE,REMOVE_DIR,CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE
+    UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE
 };
 
 class ClientSocket
@@ -21,7 +21,7 @@ public:
     void update(std::string const& path);
     void updateName(std::string const& path, std::string const& newName);
     void remove(std::string const& path);
-    void removeDir(std::string const& path);
+    //void removeDir(std::string const& path);
     void createFile(std::string const& path);
     void createDir(std::string const& path);
     void syncDir(std::string const& path);

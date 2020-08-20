@@ -104,9 +104,9 @@ void Session::manageMessage(std::string const& messageType){
     if (m_messageType=="UPDATE_NAME")
         rt=m_server.updateName(m_pathName,m_newName);
     if (m_messageType=="REMOVE")
-        rt=m_server.remove(m_pathName);
-    if (m_messageType=="REMOVE_DIR")
         rt=m_server.removeDir(m_pathName);
+    /*if (m_messageType=="REMOVE_DIR")
+        rt=m_server.removeDir(m_pathName);*/
     if (m_messageType=="CREATE_FILE")
         rt=m_server.createFile(m_pathName,m_file,m_fileSize);
     if (m_messageType=="CREATE_DIR")
@@ -142,6 +142,7 @@ void Session::sendToClient(responseType rt){
                              [this](boost::system::error_code ec, size_t )
                              {
                                  std::cout<<"messaggio di risposta inviato"<<std::endl;
+                                 //doAccept();
                              });
 
 }
@@ -165,11 +166,14 @@ ServerSocket::ServerSocket(IoService& t_ioService, short t_port, Server& server)
 
 void ServerSocket::doAccept()
 {
+    std::cout<<"server in ascolto"<<std::endl;
     m_acceptor.async_accept(m_socket,
                             [this](boost::system::error_code ec)
                             {
-                                if (!ec)
-                                    std::make_shared<Session>(std::move(m_socket),std::move(m_server))->start();
+                                if (!ec) {
+                                    std::cout<<"Comunicazione accettata\n";
+                                    std::make_shared<Session>(std::move(m_socket), std::move(m_server))->start();
+                                }
 
                                 doAccept();
                             });

@@ -45,11 +45,10 @@ int main() {
     std::thread t1{fileSystemWatcher};
 
     // 2. Connect to the server
-    boost::asio::io_service ioService;
-    boost::asio::ip::tcp::resolver resolver(ioService);
-    auto endpointIterator = resolver.resolve({ address, port });
-    ClientSocket socket(ioService, endpointIterator);
-
+    //boost::asio::io_service ioService;
+    //boost::asio::ip::tcp::resolver resolver(ioService);
+    //auto endpointIterator = resolver.resolve({ address, port });
+    //ClientSocket socket(ioService, endpointIterator);
     // 3. Authentication
 
     // 4. Synchronization
@@ -72,10 +71,15 @@ int main() {
     // 5. Consumer process
     std::pair<std::string, Status> path;
     while(true){
+
         if(path_to_process.pop(path)){
+            boost::asio::io_service ioService;
+            boost::asio::ip::tcp::resolver resolver(ioService);
+            auto endpointIterator = resolver.resolve({ address, port });
+            ClientSocket socket(ioService, endpointIterator);
             std::cout<<"Path popped\n";
             bool done = false;
-            while(!done){
+            //while(!done){
                 std::cout<<"Into the done loop\n";
                 try{
                     std::cout<<"Into try\n";
@@ -103,6 +107,7 @@ int main() {
                         case Status::Erased:
                             std::cout << "File or Directory erased: " << path.first << '\n';
                             // Update server
+                            /*AGGIUNTA DI LORENZO : MANCAVA DISCRIMINAZIONE TRA FILE E DIRECTORY */
                             socket.remove(path.first);
                             ioService.run();
                             // set sync status as synced
@@ -126,7 +131,7 @@ int main() {
                     }
                 } catch (std::exception& e){
                     std::cout << e.what() << std::endl;
-                }
+                //}
             }
         }
     }

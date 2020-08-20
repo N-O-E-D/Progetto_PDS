@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS -pthread)
 
 include_directories(../../HashExecutor)
-add_executable(server main.cpp Server.cpp Server.h ../../HashExecutor/HashExecutor.cpp ../../HashExecutor/HashExecutor.h)
+add_executable(server main.cpp Server.cpp Server.h ../../HashExecutor/HashExecutor.cpp ../../HashExecutor/HashExecutor.h ../API_server/ServerSocket.cpp ../API_server/ServerSocket.h)
 
 # OpenSSL Libraries
 #set(OPENSSL_ROOT_DIR /usr/local/Cellar/openssl@1.1/1.1.1g) #for OpenSSL installed with brew on macOS
@@ -18,7 +18,8 @@ else()
 endif()
 
 # Boost Libraries
-find_package(Boost COMPONENTS system thread filesystem REQUIRED)
+find_package(Boost COMPONENTS system thread filesystem log log_setup REQUIRED)
+set (CMAKE_CXX_FLAGS "-g -Wall -DBOOST_LOG_DYN_LINK") #per linux Lorenzo
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     target_link_libraries(server ${Boost_LIBRARIES})

@@ -81,6 +81,18 @@ bool autentica(boost::asio::streambuf& recmessage){
 
 
 void handleSocket(int portnum){
+    while(true){
+    try {
+        boost::asio::io_service ioService;
+        Server server;
+        ServerSocket serverSocket(ioService, 5000, server);
+
+        ioService.run();
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << "\n";
+    }
+    }
+    /*
     try
     {
         // Any program that uses asio need to have at least one io_service object
@@ -173,6 +185,7 @@ void handleSocket(int portnum){
         std::cerr << e.what() << std::endl;
     }
     return;
+     */
 }
 
 

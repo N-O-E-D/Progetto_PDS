@@ -83,9 +83,9 @@ void ClientSocket::buildHeader(messageType mt){
         case REMOVE:
             requestStream << "REMOVE\n" << m_path << "\n" << "\n\n";
             break;
-        case REMOVE_DIR:
+        /*case REMOVE_DIR:
             requestStream << "REMOVE_DIR\n" << m_path << "\n" << "\n\n";
-            break;
+            break;*/
         case CREATE_FILE:
             requestStream << "CREATE_FILE\n" << m_path << "\n" <<std::to_string(m_fileSize)<<"\n\n";
             break;
@@ -107,7 +107,7 @@ void ClientSocket::buildHeader(messageType mt){
     std::cout<<"HEADER"<<std::endl;
     std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_request.size());
     std::cout<<"FINE HEADER"<<std::endl;
-    BOOST_LOG_TRIVIAL(trace) << "Request size: " << m_request.size();
+    BOOST_LOG_TRIVIAL(trace) << "Request header size: " << m_request.size();
     }
 
 void ClientSocket::update(const std::string &path) {
@@ -133,13 +133,13 @@ void ClientSocket::remove(const std::string &path) {
     doConnect();
     waitResponse(REMOVE);
 }
-void ClientSocket::removeDir(const std::string &path) {
+/*void ClientSocket::removeDir(const std::string &path) {
     m_path=path;
     m_messageType=REMOVE_DIR;
     buildHeader(REMOVE_DIR);
     doConnect();
     waitResponse(REMOVE_DIR);
-}
+}*/
 void ClientSocket::createFile(const std::string &path) {
     m_path=path;
     m_messageType=CREATE_FILE;
@@ -231,9 +231,9 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
             case REMOVE:
                 remove(m_path);
                 break;
-            case REMOVE_DIR:
+            /*case REMOVE_DIR:
                 removeDir(m_path);
-                break;
+                break;*/
             case CREATE_FILE:
                 createFile(m_path);
                 break;
