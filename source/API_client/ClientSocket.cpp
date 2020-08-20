@@ -254,6 +254,10 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
             createFile(m_path);
         if(mt==SYNC_DIR)
             createDir(m_path);
+        if(mt==UPDATE)
+            createFile(m_path);
+        if(mt==UPDATE_NAME)
+            createFile(m_path);
     }
     if (response=="OLD_VERSION") {
         std::cout<<"Server ha risposto con old version"<<std::endl;
