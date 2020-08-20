@@ -28,9 +28,12 @@ private:
     void doReadFileContent(size_t t_bytesTransferred);
     void handleError(std::string const& t_functionName, boost::system::error_code const& t_ec);
     void manageMessage(std::string const& messageType);
+    void sendToClient(responseType rt);
+
     TcpSocket m_socket;
     std::vector<char> m_buf;
     boost::asio::streambuf m_requestBuf_;
+    boost::asio::streambuf m_response;
     std::ofstream m_outputFile;
     size_t m_fileSize;
     std::string m_pathName;

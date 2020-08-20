@@ -97,28 +97,54 @@ void Session::doReadFileContent(size_t t_bytesTransferred)
 }
 void Session::manageMessage(std::string const& messageType){
     std::cout<<"Invio al server "<<messageType<<std::endl;
+    responseType rt;
     //ora che ho tutti i dati ricevuti dal client richiamo le funzioni fornite dalla classe Server a seconda dell'azione
     if (m_messageType=="UPDATE")
-        m_server.update(m_pathName,m_file,m_fileSize);
+        rt=m_server.update(m_pathName,m_file,m_fileSize);
     if (m_messageType=="UPDATE_NAME")
-        m_server.updateName(m_pathName,m_newName);
+        rt=m_server.updateName(m_pathName,m_newName);
     if (m_messageType=="REMOVE")
-        m_server.remove(m_pathName);
+        rt=m_server.remove(m_pathName);
     if (m_messageType=="REMOVE_DIR")
-        m_server.removeDir(m_pathName);
+        rt=m_server.removeDir(m_pathName);
     if (m_messageType=="CREATE_FILE")
-        m_server.createFile(m_pathName,m_file,m_fileSize);
+        rt=m_server.createFile(m_pathName,m_file,m_fileSize);
     if (m_messageType=="CREATE_DIR")
-        m_server.createDir(m_pathName);
+        rt=m_server.createDir(m_pathName);
     if (m_messageType=="SYNC_DIR")
-        m_server.syncDir(m_pathName);
+        rt=m_server.syncDir(m_pathName);
     if (m_messageType=="SYNC_FILE")
-        m_server.syncFile(m_pathName,(unsigned char*) m_mdvalue.data(),(unsigned int)m_mdvalue.size());
+        rt=m_server.syncFile(m_pathName,(unsigned char*) m_mdvalue.data(),(unsigned int)m_mdvalue.size());
 
+    sendToClient(rt);
 
 
 }
+void Session::sendToClient(responseType rt){
 
+    std::ostream responseStream(&m_response);
+    switch (rt){
+        case OK:
+            responseStream << "OK"<<"\n\n";
+            break;
+        case NOT_PRESENT:
+            responseStream << "NOT_PRESENT"<<"\n\n";
+            break;
+        case OLD_VERSION:
+            responseStream << "OLD_VERSION"<<"\n\n";
+            break;
+        case INTERNAL_ERROR:
+            responseStream << "INTERNAL_ERROR"<<"\n\n";
+            break;
+    }
+    boost::asio::async_write(m_socket,
+                              m_response,
+                             [this](boost::system::error_code ec, size_t )
+                             {
+                                 std::cout<<"messaggio di risposta inviato"<<std::endl;
+                             });
+
+}
 void Session::handleError(std::string const& t_functionName, boost::system::error_code const& t_ec)
 {
     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " in " << t_functionName << " due to "
