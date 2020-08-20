@@ -6,9 +6,15 @@
 
 using namespace boost::filesystem;
 
-bool Server::update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
+responseType Server::update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
 
     std::cout<<"UPDATE"<<std::endl;
+
+    const boost::filesystem::path p(path);
+    if(!boost::filesystem::exists(p)){
+        std::cout<<"Il path "<<p<<" non esiste!"<<std::endl;
+        return NOT_PRESENT;
+    }
 
     //crea un file con nome uguale (ma con minima differenza per non rimpiazzare l'originale)
     std::string tmpname(path+"tmp");
@@ -21,72 +27,89 @@ bool Server::update(std::string const& path, const std::vector<char>& recbuffer,
         catch(std::exception& e){  //in caso di errore
             std::cerr << "Write tmp file error: " << e.what() << std::endl;
             remove(tmpname);  //rimuovi il file provvisorio
-            return false;
+            return INTERNAL_ERROR;
         }
         std::cout<<"Write tmp file success!"<<std::endl;
         recfile.close();
         //in caso di successo rimuovi il file vecchio e rinomina il file temporaneo
-        if(remove(path)){
+        if(remove(path)==OK){
             updateName(tmpname,path);
+            return OK;
         }
-        return true;
+        std::cout<<"Error removing tmp file"<<std::endl;
+        return INTERNAL_ERROR;
     }
     std::cout<<"Error opening file "<<path<<std::endl;
-    return false;
+    return INTERNAL_ERROR;
 
 }
 
-bool Server::updateName(std::string const& path, std::string const& newName){  //riceve in ingresso il vecchio path e il nuovo path
+responseType Server::updateName(std::string const& path, std::string const& newName){  //riceve in ingresso il vecchio path e il nuovo path
 
     std::cout<<"UPDATENAME"<<std::endl;
 
     const boost::filesystem::path oldp(path);
     const boost::filesystem::path newp(newName);
 
+    if(!boost::filesystem::exists(oldp)){
+        std::cout<<"Il path "<<oldp<<" non esiste!"<<std::endl;
+        return NOT_PRESENT;
+    }
+
     boost::system::error_code ec;
     rename(oldp, newp, ec);  //questa versione di rename prende il codice errore, pertanto non c'è bisogno di inserirla in un try/catch
     if(ec){   //basta verificare la presenza dell'errore o meno
         std::cerr<<"Update name error: "<<ec.message()<<std::endl;
-        return false;
+        return INTERNAL_ERROR;
     }
     std::cout<<"Update name success!"<<std::endl;
-    return true;
+    return OK;
 }
 
-bool Server::remove(std::string const& path){  //se path è una directory, elimina solo se la directory è vuota
+responseType Server::remove(std::string const& path){  //se path è una directory, elimina solo se la directory è vuota
 
     std::cout<<"REMOVE"<<std::endl;
 
     const boost::filesystem::path p(path);
 
+    if(!boost::filesystem::exists(p)){
+        std::cout<<"Il path "<<p<<" non esiste!"<<std::endl;
+        return NOT_PRESENT;
+    }
+
     boost::system::error_code ec;
     boost::filesystem::remove(p,ec);  //questa versione di remove prende il codice errore, pertanto non c'è bisogno di inserirla in un try/catch
     if(ec){   //basta verificare la presenza dell'errore o meno
         std::cerr<<"Remove error: "<<ec.message()<<std::endl;
-        return false;
+        return INTERNAL_ERROR;
     }
     std::cout<<"Remove success!"<<std::endl;
-    return true;
+    return OK;
 }
 
-bool Server::removeDir(std::string const& path){  //se path è un file, rimuove solo il file
+responseType Server::removeDir(std::string const& path){  //se path è un file, rimuove solo il file
 
     std::cout<<"REMOVEDIR"<<std::endl;
 
     const boost::filesystem::path p(path);
 
+    if(!boost::filesystem::exists(p)){
+        std::cout<<"Il path "<<p<<" non esiste!"<<std::endl;
+        return NOT_PRESENT;
+    }
+
     boost::system::error_code ec;
     boost::filesystem::remove_all(p,ec);  //questa versione di remove_all prende il codice errore, pertanto non c'è bisogno di inserirla in un try/catch
     if(ec){   //basta verificare la presenza dell'errore o meno
         std::cerr<<"Remove dir error: "<<ec.message()<<std::endl;
-        return false;
+        return INTERNAL_ERROR;
     }
     std::cout<<"Remove dir success!"<<std::endl;
-    return true;
+    return OK;
 }
 
 
-bool Server::createFile(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
+responseType Server::createFile(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
 
     std::cout<<"CREATEFILE"<<std::endl;
 
@@ -99,17 +122,17 @@ bool Server::createFile(std::string const& path, const std::vector<char>& recbuf
         catch(std::exception& e){  //in caso di errore
             std::cerr << "Write file error: " << e.what() << std::endl;
             remove(path);  //rimuovi il file provvisorio
-            return false;
+            return INTERNAL_ERROR;
         }
         std::cout<<"Write file success!"<<std::endl;
         recfile.close();
-        return true;
+        return OK;
     }
     std::cout<<"Error opening file "<<path<<std::endl;
-    return false;
+    return INTERNAL_ERROR;
 }
 
-bool Server::createDir(std::string const& path){
+responseType Server::createDir(std::string const& path){
 
     std::cout<<"CREATEDIR"<<std::endl;
 
@@ -119,14 +142,14 @@ bool Server::createDir(std::string const& path){
     boost::filesystem::create_directory(p,ec);  //questa versione di create_directory prende il codice errore, pertanto non c'è bisogno di inserirla in un try/catch
     if(ec){   //basta verificare la presenza dell'errore o meno
         std::cerr<<"Create dir error: "<<ec.message()<<std::endl;
-        return false;
+        return INTERNAL_ERROR;
     }
     std::cout<<"Create dir success!"<<std::endl;
-    return true;
+    return OK;
 
 }
 
-bool Server::syncDir(std::string const& path){
+responseType Server::syncDir(std::string const& path){
 
     std::cout<<"SYNCDIR"<<std::endl;
 
@@ -134,13 +157,13 @@ bool Server::syncDir(std::string const& path){
 
     if(boost::filesystem::exists(p)) {
         std::cout<<"Il path esiste!"<<std::endl;
-        return true;
+        return OK;
     }
     std::cout<<"Il path non esiste!"<<std::endl;
-    return false;
+    return NOT_PRESENT;
 }
 
-bool Server::syncFile(std::string const& path, unsigned char* md_value, unsigned int md_len) {
+responseType Server::syncFile(std::string const& path, unsigned char* md_value, unsigned int md_len) {
 
     std::cout << "SYNCFILE" << std::endl;
 
@@ -153,11 +176,11 @@ bool Server::syncFile(std::string const& path, unsigned char* md_value, unsigned
     if (boost::filesystem::exists(p)) {
         if (compareHash(md_value, md_value_path, md_len)) {
             std::cout << "Hash uguali" << std::endl;
-            return true;
+            return OK;
         }
         std::cout << "Hash non uguali" << std::endl;
-        return false;
+        return OLD_VERSION;
     }
     std::cout<<"Il path non esiste"<<std::endl;
-    return false;
+    return NOT_PRESENT;
 }

@@ -19,19 +19,21 @@
 #include <boost/iterator.hpp>
 #include <boost/cstdint.hpp>
 
-
+enum responseType{
+    OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR
+};
 
 class Server {
 
 public:
-    bool update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize);
-    bool updateName(std::string const& path, std::string const& newName);
-    bool remove(std::string const& path);
-    bool removeDir(std::string const& path);
-    bool createFile(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize);
-    bool createDir(std::string const& path);
-    bool syncDir(std::string const& path);
-    bool syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
+    responseType update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize);
+    responseType updateName(std::string const& path, std::string const& newName);
+    responseType remove(std::string const& path);
+    responseType removeDir(std::string const& path);
+    responseType createFile(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize);
+    responseType createDir(std::string const& path);
+    responseType syncDir(std::string const& path);
+    responseType syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
 };
 
 

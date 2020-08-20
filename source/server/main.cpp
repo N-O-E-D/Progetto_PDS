@@ -79,7 +79,7 @@ bool autentica(boost::asio::streambuf& recmessage){
 
 }
 
-/*
+
 void handleSocket(int portnum){
     try
     {
@@ -175,7 +175,6 @@ void handleSocket(int portnum){
     return;
 }
 
-*/
 
 int main()
 {
