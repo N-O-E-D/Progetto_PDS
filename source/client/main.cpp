@@ -44,18 +44,18 @@ int main() {
     // 1. Start File System Watcher
     std::thread t1{fileSystemWatcher};
 
+    //1.1 OpenSocket (MODIFICA AGGIUNTA DA LORENZO)
+    boost::asio::io_service ioService;
+    boost::asio::ip::tcp::resolver resolver(ioService);
+    auto endpointIterator = resolver.resolve({ address, port });
+    ClientSocket socket(ioService, endpointIterator);
+    ioService.run();
     // 2. Synchronization -> problem with async communication
     pathSyncStatus.iterate_map([address, port] (const std::pair<std::string,SyncStatus>& path) -> void {
         // 2.1 If already synced return
         if( path.second == SyncStatus::Synced ) return;
 
-        // 2.2 Open socket
-        boost::asio::io_service ioService;
-        boost::asio::ip::tcp::resolver resolver(ioService);
-        auto endpointIterator = resolver.resolve({ address, port });
-        ClientSocket socket(ioService, endpointIterator);
-
-        // 2.3 If not synced, do it
+        // 2.2 If not synced, do it
         if( std::filesystem::is_directory(std::filesystem::path(path.first)) )
             socket.syncDir(path.first);
         else
@@ -69,10 +69,7 @@ int main() {
     while(true){
         if(path_to_process.pop(path)){
             // 3.1 Open socket
-            boost::asio::io_service ioService;
-            boost::asio::ip::tcp::resolver resolver(ioService);
-            auto endpointIterator = resolver.resolve({ address, port });
-            ClientSocket socket(ioService, endpointIterator);
+            //Open Socket già fatta (MODIFICA DI LORENZO)
 
             // 3.2 Send the corresponding message
             try{
@@ -81,7 +78,7 @@ int main() {
                         std::cout << "File created: " << path.first << '\n';
                         // Update server
                         socket.createFile(path.first);
-                        ioService.run();
+                        //ioService.run();
                         // set sync status as synced
                         pathSyncStatus.setSynced(path.first);
                         break;
@@ -89,7 +86,7 @@ int main() {
                         std::cout << "File modified: " << path.first << '\n';
                         // Update server
                         socket.update(path.first);
-                        ioService.run();
+                        //ioService.run();
                         // set sync status as synced
                         pathSyncStatus.setSynced(path.first);
                         break;
@@ -97,7 +94,7 @@ int main() {
                         std::cout << "File or Directory erased: " << path.first << '\n';
                         // Update server
                         socket.remove(path.first);
-                        ioService.run();
+                        //ioService.run();
                         // set sync status as synced
                         pathSyncStatus.remove(path.first);
                         break;
@@ -105,7 +102,7 @@ int main() {
                         std::cout << "Directory created: " << path.first << '\n';
                         // Update server
                         socket.createDir(path.first);
-                        ioService.run();
+                        //ioService.run();
                         // set sync status as synced
                         pathSyncStatus.setSynced(path.first);
                         break;
