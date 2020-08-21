@@ -5,7 +5,7 @@
 
 #include <boost/asio.hpp>
 enum messageType{
-    UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE
+    UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH
 };
 
 class ClientSocket
@@ -26,7 +26,7 @@ public:
     void createDir(std::string const& path);
     void syncDir(std::string const& path);
     void syncFile(std::string const& path);
-
+    void authenticate(std:: string const& username, std::string const& password);
 private:
     void openFile(std::string const& t_path);
     void doConnect();
@@ -39,10 +39,15 @@ private:
     void waitResponse(messageType mt);
     void processResponse(size_t t_bytesTransferred,messageType mt);
     void analyzeResponse(std::string response,messageType mt);
+    void doAuthentication();
+    void waitChallenge();
+    void sendCryptoChallenge();
 
     TcpResolver m_ioService;
     TcpSocket m_socket;
     TcpResolverIterator m_endpointIterator;
+    std::string m_password;
+    std::string m_username;
     std::vector<char> m_buf;
     boost::asio::streambuf m_request;
     std::ifstream m_sourceFile;

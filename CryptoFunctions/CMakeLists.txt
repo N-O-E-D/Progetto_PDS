@@ -3,7 +3,7 @@ project(hash)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(hash HashExecutor.cpp HashExecutor.h main.cpp)
+add_executable(hash CryptoExecutor.cpp CryptoExecutor.h main.cpp)
 
 # OpenSSL Libraries
 find_package(OpenSSL)

@@ -7,14 +7,49 @@
 #include "ClientSocket.h"
 #include "../../HashExecutor/HashExecutor.h"
 
-
+#define LENGTHCHALLENGE 100
 ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator):
                             m_ioService(t_ioService),
                             m_socket(t_ioService),
                             m_endpointIterator(t_endpointIterator)
                             {}
 
+void ClientSocket::authenticate(std:: string const& username, std::string const& password){
+    m_password=password;
+    m_username=username;
+    buildHeader(AUTH);
+    doAuthentication();
+}
+void ClientSocket::doAuthentication(){
+    boost::asio::async_connect(m_socket, m_endpointIterator,
+                               [this](boost::system::error_code ec, TcpResolverIterator)
+                               {
+                                   if (!ec) {
+                                       //invio l'header di autenticazione
+                                       writeHeader(m_request);
+                                       waitChallenge();
 
+                                   } else {
+                                       std::cout << "Couldn't connect to host. Please run server "
+                                                    "or check network connection.\n";
+                                       BOOST_LOG_TRIVIAL(error) << "Error: " << ec.message();
+                                   }
+                               });
+
+}
+void ClientSocket::waitChallenge(){
+    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), LENGTHCHALLENGE),
+                     [this](boost::system::error_code ec, size_t bytes)
+                     {
+                         if (!ec)
+                             sendCryptoChallenge();
+                         else
+                             std::cout<<"errore in waitChallenge"<<std::endl;
+                     });
+}
+void ClientSocket::sendCryptoChallenge(){
+
+}
 void ClientSocket::openFile(std::string const& t_path)
 {
     m_sourceFile.open(t_path, std::ios_base::binary);
@@ -98,6 +133,9 @@ void ClientSocket::buildHeader(messageType mt){
             break;
         case SYNC_FILE:
             requestStream << "SYNC_FILE\n" << m_path<<"\n"<<m_mdvalue<<"\n\n";
+            break;
+        case AUTH:
+            requestStream << "AUTH\n" << m_username<<"\n\n";
             break;
         default:
             return;
@@ -247,7 +285,7 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
                 createDir(m_path);
                 break;
             case SYNC_FILE:
-                syncFile(m_path,reinterpret_cast<unsigned char*>(m_mdvalue.data()),m_mdlen);
+                syncFile(m_path);
                 break;
             case SYNC_DIR:
                 syncDir(m_path);

@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(api_server)
 
 set(CMAKE_CXX_STANDARD 17)
-#include_directories(../../HashExecutor)
-add_executable(api_server main.cpp ServerSocket.cpp ServerSocket.h ../server/Server.h ../server/Server.cpp ../../HashExecutor/HashExecutor.cpp ../../HashExecutor/HashExecutor.h)
+#include_directories(../../CryptoFunctions)
+add_executable(api_server main.cpp ServerSocket.cpp ServerSocket.h ../server/Server.h ../server/Server.cpp ../../CryptoFunctions/CryptoExecutor.cpp ../../CryptoFunctions/CryptoExecutor.h)
 
 # OpenSSL Libraries
 #set(OPENSSL_ROOT_DIR /usr/local/Cellar/openssl@1.1/1.1.1g) #for OpenSSL installed with brew on macOS
