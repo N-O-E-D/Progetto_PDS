@@ -27,9 +27,12 @@ void fileSystemWatcher() {
             std::cout << "Not processed: " << path_to_watch << std::endl;
             return;
         }
-
-        // Insert path into the queue, if it is full returns false
-        while(!path_to_process.push(make_pair(path_to_watch, status)));
+        // Inset the path into queue, if it is full enter the if
+        if(!path_to_process.push(make_pair(path_to_watch, status))){
+            // Remove the oldest element and push the new one
+            path_to_process.pop();
+            path_to_process.push(make_pair(path_to_watch, status));
+        }
         // Set path as NotSynced
         pathSyncStatus.setNotSynced(path_to_watch);
     });
@@ -59,22 +62,22 @@ int main() {
     ClientSocket socket(ioService, endpointIterator);
     ioService.run();
 
-    // 3. Synchronization -> problem with async communication
-    pathSyncStatus.iterate_map([&socket] (const std::pair<std::string,SyncStatus>& path) -> void {
-        // 3.1 If already synced return
-        if( path.second == SyncStatus::Synced ) return;
-        // 3.2 If not synced, do it
-        if( std::filesystem::is_directory(std::filesystem::path(path.first)) )
-            socket.syncDir(path.first, syncHandler);
-        else
-            socket.syncFile(path.first, syncHandler);
-    });
-
-    // 4. Consumer process
+    // 3. Consumer process
     std::pair<std::string, Status> path;
     while(true){
+        // 3.1 Synchronization
+        if(!pathSyncStatus.isSynced())
+            pathSyncStatus.iterate_map([&socket] (const std::pair<std::string,SyncStatus>& path) -> void {
+                // 3.1 If already synced return
+                if( path.second == SyncStatus::Synced ) return;
+                // 3.2 If not synced, do it
+                if( std::filesystem::is_directory(std::filesystem::path(path.first)) )
+                    socket.syncDir(path.first, syncHandler);
+                else
+                    socket.syncFile(path.first, syncHandler);
+            });
         if(path_to_process.pop(path)){
-            // 4.1 Send the corresponding message
+            // 3.2 Send the corresponding message
             try{
                 switch(path.second) {
                     case Status::FileCreated:

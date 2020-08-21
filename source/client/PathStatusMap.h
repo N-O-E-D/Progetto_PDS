@@ -15,9 +15,11 @@ class PathStatusMap {
 private:
     std::unordered_map<std::string, SyncStatus> map;
     std::mutex m;
+//    bool isSynced;
 public:
     explicit PathStatusMap(const std::string& root_path) {
         std::cout<<"PathStatusMap constructor\n";
+//        isSynced = false;
         for (auto &file : std::filesystem::recursive_directory_iterator(root_path))
             this->insert(file.path().string(), SyncStatus::NotSynced);
     };
@@ -46,5 +48,15 @@ public:
     void setNotSynced(const std::string& key) {
         std::unique_lock ul (m);
         map[key] = SyncStatus::NotSynced;
+//        isSynced = false;
+    }
+
+    bool isSynced() {
+        std::unique_lock ul (m);
+        for(auto it = map.begin(); it != map.end(); it++) {
+            if (it->second == SyncStatus::NotSynced)
+                return false;
+        }
+        return true;
     }
 };
