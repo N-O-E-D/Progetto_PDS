@@ -1,5 +1,5 @@
 
-#include "../../HashExecutor/HashExecutor.h"
+#include "../../CryptoFunctions/CryptoExecutor.h"
 #include <ctime>
 #include <iostream>
 #include <string>
@@ -13,7 +13,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/iterator.hpp>
 #include <boost/cstdint.hpp>
-#include "Server.h"
+#include "./Server.h"
 #include "../API_server/ServerSocket.h"
 
 //create a Server object (provides ADD, MODIFY, REMOVE methods)
@@ -33,12 +33,6 @@ std::map<std::string,int> commands = {
         {"SYNCFILE",8},
 };
 
-std::map<std::string,std::string> users = {
-        {"Lorenzo","passwd1"},
-        {"Giandonato","passwd2"},
-        {"Bruno","passwd3"}
-};
-
 using boost::asio::ip::tcp;
 
 int selectComando(std::string& str, std::string& path, std::string& newpath){
@@ -52,7 +46,7 @@ int selectComando(std::string& str, std::string& path, std::string& newpath){
     std::cout<<cmd<<" "<<path<<" "<<newpath<<std::endl;
     return commands[cmd];
 }
-
+/*
 bool autentica(boost::asio::streambuf& recmessage){
     //from streambuf to string
     std::string recmex(boost::asio::buffers_begin(recmessage.data()),boost::asio::buffers_begin(recmessage.data())+recmessage.size());
@@ -78,7 +72,7 @@ bool autentica(boost::asio::streambuf& recmessage){
         return false;}
 
 }
-
+*/
 
 void handleSocket(int portnum){
     while(true){
@@ -191,7 +185,6 @@ void handleSocket(int portnum){
 
 int main()
 {
-
     //launch the pool with num_threads threads
     //Ogni thread gestisce un client (su una porta diversa), tramite una coda di richieste provenienti dallo stesso
     //si possono gestire fino a num_threads clients contemporaneamente
@@ -202,6 +195,13 @@ int main()
     //boost::asio::post(pool,[](){handleSocket(5001);});
 
     pool.join();
-
+/*
+    const std::string filename("../credenziali.txt");
+    const std::string username("Bruno");
+    const std::string password("passwd3");
+    Server s;
+    s.loadUsers(filename);
+    s.checkCredenziali(username,password);
     return 0;
+*/
 }
