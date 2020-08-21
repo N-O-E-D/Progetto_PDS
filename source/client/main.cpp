@@ -45,10 +45,11 @@ int main() {
     std::thread t1{fileSystemWatcher};
 
     // 2. Connect to the server
-    //boost::asio::io_service ioService;
-    //boost::asio::ip::tcp::resolver resolver(ioService);
-    //auto endpointIterator = resolver.resolve({ address, port });
-    //ClientSocket socket(ioService, endpointIterator);
+    boost::asio::io_service ioService;
+    boost::asio::ip::tcp::resolver resolver(ioService);
+    auto endpointIterator = resolver.resolve({ address, port });
+    ClientSocket socket(ioService, endpointIterator);
+    ioService.run();
     // 3. Authentication
 
     // 4. Synchronization
@@ -73,10 +74,6 @@ int main() {
     while(true){
 
         if(path_to_process.pop(path)){
-            boost::asio::io_service ioService;
-            boost::asio::ip::tcp::resolver resolver(ioService);
-            auto endpointIterator = resolver.resolve({ address, port });
-            ClientSocket socket(ioService, endpointIterator);
             std::cout<<"Path popped\n";
             bool done = false;
             //while(!done){
@@ -88,7 +85,7 @@ int main() {
                             std::cout << "File created: " << path.first << '\n';
                             // Update server
                             socket.createFile(path.first);
-                            ioService.run();
+                            //ioService.run();
                             // set sync status as synced
                             pathSyncStatus.setSynced(path.first);
                             // break the loop
@@ -98,7 +95,7 @@ int main() {
                             std::cout << "File modified: " << path.first << '\n';
                             // Update server
                             socket.update(path.first);
-                            ioService.run();
+                            //ioService.run();
                             // set sync status as synced
                             pathSyncStatus.setSynced(path.first);
                             // break the loop
@@ -109,7 +106,7 @@ int main() {
                             // Update server
                             /*AGGIUNTA DI LORENZO : MANCAVA DISCRIMINAZIONE TRA FILE E DIRECTORY */
                             socket.remove(path.first);
-                            ioService.run();
+                            //ioService.run();
                             // set sync status as synced
                             pathSyncStatus.remove(path.first);
                             // break the loop
@@ -119,7 +116,7 @@ int main() {
                             std::cout << "Directory created: " << path.first << '\n';
                             // Update server
                             socket.createDir(path.first);
-                            ioService.run();
+                            //ioService.run();
                             // set sync status as synced
                             pathSyncStatus.setSynced(path.first);
                             // break the loop
