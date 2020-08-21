@@ -193,9 +193,9 @@ responseType Server::syncFile(std::string const& path, unsigned char* md_value, 
 
 /* ***** AUTENTICAZIONE ***** */
 
-std::map<std::string,std::string> credenziali;
+static std::map<std::string,std::string> credenziali;
 
-responseType Server::loadUsers(const std::string& filename){ //default filename: "../credenziali.txt"
+responseType loadUsers(const std::string& filename){ //default filename: "../credenziali.txt"
     std::ifstream file;
 
     std::string key;

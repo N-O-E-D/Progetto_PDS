@@ -185,6 +185,8 @@ void handleSocket(int portnum){
 
 int main()
 {
+    const std::string filename("../credenziali.txt");
+    loadUsers(filename);
     //launch the pool with num_threads threads
     //Ogni thread gestisce un client (su una porta diversa), tramite una coda di richieste provenienti dallo stesso
     //si possono gestire fino a num_threads clients contemporaneamente

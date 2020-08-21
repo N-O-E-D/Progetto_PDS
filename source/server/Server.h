@@ -24,6 +24,7 @@ enum responseType{
     OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR, WRONG_PASSWORD, WRONG_USERNAME
 };
 
+responseType loadUsers(const std::string& filename);
 
 class Server {
 
@@ -37,7 +38,6 @@ public:
     responseType syncDir(std::string const& path);
     responseType syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
 
-    responseType loadUsers(const std::string& filename);
     responseType checkCredenziali(const std::string& username, const std::string& password);
 };
 
