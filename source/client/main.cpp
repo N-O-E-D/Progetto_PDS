@@ -35,6 +35,14 @@ void fileSystemWatcher() {
     });
 }
 
+void syncHandler(const std::string& path) {
+   pathSyncStatus.setSynced(path);
+}
+
+void removeHandler(const std::string& path){
+    pathSyncStatus.remove(path);
+}
+
 int main() {
     std::cout<<"Starting program\n";
 
@@ -44,67 +52,50 @@ int main() {
     // 1. Start File System Watcher
     std::thread t1{fileSystemWatcher};
 
-    //1.1 OpenSocket (MODIFICA AGGIUNTA DA LORENZO)
+    // 2. Open socket (MODIFICA AGGIUNTA DA LORENZO)
     boost::asio::io_service ioService;
     boost::asio::ip::tcp::resolver resolver(ioService);
     auto endpointIterator = resolver.resolve({ address, port });
     ClientSocket socket(ioService, endpointIterator);
     ioService.run();
-    // 2. Synchronization -> problem with async communication
-    pathSyncStatus.iterate_map([address, port] (const std::pair<std::string,SyncStatus>& path) -> void {
-        // 2.1 If already synced return
+
+    // 3. Synchronization -> problem with async communication
+    pathSyncStatus.iterate_map([&socket] (const std::pair<std::string,SyncStatus>& path) -> void {
+        // 3.1 If already synced return
         if( path.second == SyncStatus::Synced ) return;
-
-        // 2.2 If not synced, do it
+        // 3.2 If not synced, do it
         if( std::filesystem::is_directory(std::filesystem::path(path.first)) )
-            socket.syncDir(path.first);
+            socket.syncDir(path.first, syncHandler);
         else
-            socket.syncFile(path.first);
-
-        pathSyncStatus.setSynced(path.first);
+            socket.syncFile(path.first, syncHandler);
     });
 
-    // 3. Consumer process
+    // 4. Consumer process
     std::pair<std::string, Status> path;
     while(true){
         if(path_to_process.pop(path)){
-            // 3.1 Open socket
-            //Open Socket già fatta (MODIFICA DI LORENZO)
-
-            // 3.2 Send the corresponding message
+            // 4.1 Send the corresponding message
             try{
                 switch(path.second) {
                     case Status::FileCreated:
                         std::cout << "File created: " << path.first << '\n';
                         // Update server
-                        socket.createFile(path.first);
-                        //ioService.run();
-                        // set sync status as synced
-                        pathSyncStatus.setSynced(path.first);
+                        socket.createFile(path.first, syncHandler);
                         break;
                     case Status::FileModified:
                         std::cout << "File modified: " << path.first << '\n';
                         // Update server
-                        socket.update(path.first);
-                        //ioService.run();
-                        // set sync status as synced
-                        pathSyncStatus.setSynced(path.first);
+                        socket.update(path.first, syncHandler);
                         break;
                     case Status::Erased:
                         std::cout << "File or Directory erased: " << path.first << '\n';
                         // Update server
-                        socket.remove(path.first);
-                        //ioService.run();
-                        // set sync status as synced
-                        pathSyncStatus.remove(path.first);
+                        socket.remove(path.first, removeHandler);
                         break;
                     case Status::DirCreated:
                         std::cout << "Directory created: " << path.first << '\n';
                         // Update server
-                        socket.createDir(path.first);
-                        //ioService.run();
-                        // set sync status as synced
-                        pathSyncStatus.setSynced(path.first);
+                        socket.createDir(path.first, syncHandler);
                         break;
                     default:
                         std::cout << "Error! Unknown file status.\n";
@@ -117,3 +108,4 @@ int main() {
     t1.join();
     return 0;
 }
+

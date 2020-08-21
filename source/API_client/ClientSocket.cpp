@@ -5,7 +5,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "ClientSocket.h"
-#include "../../HashExecutor/HashExecutor.h"
+#include "../../CryptoFunctions/CryptoExecutor.h"
 
 #define LENGTHCHALLENGE 100
 ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator):
@@ -149,7 +149,7 @@ void ClientSocket::buildHeader(messageType mt){
     BOOST_LOG_TRIVIAL(trace) << "Request header size: " << m_request.size();
     }
 
-void ClientSocket::update(const std::string &path) {
+void ClientSocket::update(const std::string &path, const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=UPDATE;
     openFile(m_path);
@@ -157,7 +157,7 @@ void ClientSocket::update(const std::string &path) {
     doConnect();
     waitResponse(UPDATE);
 }
-void ClientSocket::updateName(const std::string &path,std::string const& newName) {
+void ClientSocket::updateName(const std::string &path, std::string const& newName) {
     m_path=path;
     m_messageType=UPDATE_NAME;
     m_newName=newName;
@@ -165,7 +165,7 @@ void ClientSocket::updateName(const std::string &path,std::string const& newName
     doConnect();
     waitResponse(UPDATE_NAME);
 }
-void ClientSocket::remove(const std::string &path) {
+void ClientSocket::remove(const std::string &path, const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=REMOVE;
     buildHeader(REMOVE);
@@ -179,7 +179,7 @@ void ClientSocket::remove(const std::string &path) {
     doConnect();
     waitResponse(REMOVE_DIR);
 }*/
-void ClientSocket::createFile(const std::string &path) {
+void ClientSocket::createFile(const std::string &path, const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=CREATE_FILE;
     openFile(m_path);
@@ -187,21 +187,21 @@ void ClientSocket::createFile(const std::string &path) {
     doConnect();
     waitResponse(CREATE_FILE);
 }
-void ClientSocket::createDir(const std::string &path) {
+void ClientSocket::createDir(const std::string &path, const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=CREATE_DIR;
     buildHeader(CREATE_DIR);
     doConnect();
     waitResponse(CREATE_DIR);
 }
-void ClientSocket::syncDir(std::string const& path){
+void ClientSocket::syncDir(std::string const& path, const std::function<void (std::string)> &action){
     m_path=path;
     m_messageType=SYNC_DIR;
     buildHeader(SYNC_DIR);
     doConnect();
     waitResponse(SYNC_DIR);
 }
-void ClientSocket::syncFile(std::string const& path){
+void ClientSocket::syncFile(std::string const& path, const std::function<void (std::string)> &action){
     m_path=path;
     m_messageType=SYNC_FILE;
 
