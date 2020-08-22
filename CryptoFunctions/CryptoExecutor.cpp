@@ -10,6 +10,13 @@
 #define BUF_SIZE 1024
 #define KEYLEN 32
 #define MAX_BUF 2048
+
+void handleErrors(void)
+{
+    ERR_print_errors_fp(stderr);
+    abort();
+}
+
 unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
     EVP_MD_CTX *md;
     //unsigned char md_value[EVP_MAX_MD_SIZE];
@@ -70,21 +77,67 @@ std::pair<unsigned  char* , int> HKDF(std::string const& password,std::string co
     return std::make_pair(out,KEYLEN);
 }
 
-std::string genRandomBytes(int bytes){
+unsigned char* genRandomBytes(int bytes){
     int i;
-    //unsigned char random_string[MAX_BUF];
-    std::string rb;
-    rb.resize(bytes);
+    unsigned char random_string[MAX_BUF];
+
     if(bytes>MAX_BUF){
         printf("Maximum size allowed exxeced. Set to %d\n",MAX_BUF);
         bytes=MAX_BUF;
     }
 
-    //RAND_bytes(random_string,bytes);
-    //std::cout<<rb<<std::endl;
+    RAND_bytes(random_string,bytes);
     printf("Sequence generated: ");
-    for(i = 0; i < rb.size() ; i++)
-        printf("%02x", rb.at(i));
+    for(i = 0; i < bytes ; i++)
+        printf("%02x", random_string[i]);
     printf("\n");
-    return rb;
+    return random_string;
+}
+
+std::pair<unsigned char*,int> encrypt(std::string const& message,unsigned char* iv, unsigned char* key){
+
+    EVP_CIPHER_CTX *ctx;
+    int len;
+
+    int ciphertext_len;
+    unsigned char ciphertext[BUF_SIZE];
+    /* Create and initialise the context */
+    if(!(ctx = EVP_CIPHER_CTX_new()))
+        handleErrors();
+
+    /*
+     * Initialise the encryption operation. IMPORTANT - ensure you use a key
+     * and IV size appropriate for your cipher
+     * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+     * IV size for *most* modes is the same as the block size. For AES this
+     * is 128 bits
+     */
+    if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+        handleErrors();
+
+    /*
+     * Provide the message to be encrypted, and obtain the encrypted output.
+     * EVP_EncryptUpdate can be called multiple times if necessary
+     */
+    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char*) message.data(), message.size()))
+        handleErrors();
+    ciphertext_len = len;
+
+    /*
+     * Finalise the encryption. Further ciphertext bytes may be written at
+     * this stage.
+     */
+    if(1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len))
+        handleErrors();
+    ciphertext_len += len;
+
+    /* Clean up */
+    //EVP_CIPHER_CTX_free(ctx);
+    //printf("the ciphertext is:\n");
+    //for (int i=0;i<ciphertext_len;i++)
+      //  printf("%c",ciphertext[i]);
+
+    //return std::make_pair(ciphertext,ciphertext_len);
+
+
 }

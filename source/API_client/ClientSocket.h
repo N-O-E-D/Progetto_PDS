@@ -4,6 +4,8 @@
 #include <fstream>
 
 #include <boost/asio.hpp>
+#include "../../CryptoFunctions/CryptoExecutor.h"
+
 enum messageType{
     UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH
 };

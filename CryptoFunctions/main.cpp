@@ -8,7 +8,9 @@ int main(){
     //for(int i = 0; i < md_len; i++)
     //    printf("%02x", md_value[i]);
     //printf("\n");
-    genRandomBytes(32);
+    unsigned char* iv=genRandomBytes(16);
+    unsigned char* key= genRandomBytes(32);
+    encrypt("bbbbbbbb",iv,key);
     return 0;
 }
 

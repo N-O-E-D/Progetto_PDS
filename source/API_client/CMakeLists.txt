@@ -3,7 +3,7 @@ project(API_client)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(API_client ClientSocket.cpp ClientSocket.h main.cpp )
+add_executable(API_client ClientSocket.cpp ClientSocket.h main.cpp ../../CryptoFunctions/CryptoExecutor.cpp ../../CryptoFunctions/CryptoExecutor.h)
 
 # OpenSSL Libraries
 #set(OPENSSL_ROOT_DIR /usr/local/Cellar/openssl@1.1/1.1.1g) #for OpenSSL installed with brew on macOS

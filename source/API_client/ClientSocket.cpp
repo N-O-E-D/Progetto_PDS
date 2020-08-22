@@ -5,7 +5,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "ClientSocket.h"
-#include "../../HashExecutor/HashExecutor.h"
+
 
 #define LENGTHCHALLENGE 100
 ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator):
@@ -48,6 +48,9 @@ void ClientSocket::waitChallenge(){
                      });
 }
 void ClientSocket::sendCryptoChallenge(){
+    std::string salt=genRandomBytes(32);
+    auto key= HKDF (m_password,salt);
+    std::string cipherChallange = encrypt(m_buf,reinterpret_cast<unsigned char*>(salt.data()),key.first);
 
 }
 void ClientSocket::openFile(std::string const& t_path)
