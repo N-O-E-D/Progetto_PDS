@@ -5,7 +5,7 @@
 #ifndef PROVA_SOCKET_ASIO_SERVER_H
 #define PROVA_SOCKET_ASIO_SERVER_H
 
-#include "../../HashExecutor/HashExecutor.h"
+#include "../../CryptoFunctions/CryptoExecutor.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -18,10 +18,13 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/iterator.hpp>
 #include <boost/cstdint.hpp>
+#include <fstream>
 
 enum responseType{
-    OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR
+    OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR, WRONG_PASSWORD, WRONG_USERNAME
 };
+
+responseType loadUsers(const std::string& filename);
 
 class Server {
 
@@ -34,6 +37,8 @@ public:
     responseType createDir(std::string const& path);
     responseType syncDir(std::string const& path);
     responseType syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
+
+    responseType checkCredenziali(const std::string& username, const std::string& password);
 };
 
 

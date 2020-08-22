@@ -20,14 +20,16 @@ public:
 
     ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator);
 
-    void update(std::string const& path);
+    /* Modified by GIANDONATO FARINA */
+
+    void update(std::string const& path, const std::function<void (std::string)> &action);
     void updateName(std::string const& path, std::string const& newName);
-    void remove(std::string const& path);
+    void remove(std::string const& path, const std::function<void (std::string)> &action);
     //void removeDir(std::string const& path);
-    void createFile(std::string const& path);
-    void createDir(std::string const& path);
-    void syncDir(std::string const& path);
-    void syncFile(std::string const& path);
+    void createFile(std::string const& path, const std::function<void (std::string)> &action);
+    void createDir(std::string const& path, const std::function<void (std::string)> &action);
+    void syncDir(std::string const& path, const std::function<void (std::string)> &action);
+    void syncFile(std::string const& path, const std::function<void (std::string)> &action);
     void authenticate(std:: string const& username, std::string const& password);
 private:
     void openFile(std::string const& t_path);

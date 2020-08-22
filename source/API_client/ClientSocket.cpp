@@ -5,7 +5,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "ClientSocket.h"
-
+#include "../../CryptoFunctions/CryptoExecutor.h"
 
 #define LENGTHCHALLENGE 100
 ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator):

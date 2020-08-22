@@ -4,7 +4,11 @@
 
 #include "Server.h"
 
-using namespace boost::filesystem;
+//using namespace boost::filesystem;
+
+
+
+/* ***** FILESYSTEM ***** */
 
 responseType Server::update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
 
@@ -183,4 +187,49 @@ responseType Server::syncFile(std::string const& path, unsigned char* md_value, 
     }
     std::cout<<"Il path non esiste"<<std::endl;
     return NOT_PRESENT;
+}
+
+
+
+/* ***** AUTENTICAZIONE ***** */
+
+static std::map<std::string,std::string> credenziali;
+
+responseType loadUsers(const std::string& filename){ //default filename: "../credenziali.txt"
+    std::ifstream file;
+
+    std::string key;
+    std::string value;
+    file.open(filename);
+
+    if(file.is_open()){
+        while(file >> key >> value){
+            credenziali[key]=value;
+        }
+        std::cout<<"Credenziali caricate correttamente!"<<std::endl;
+        return OK;
+    }
+    else{
+        std::cout<<"Errore apertura file "<<filename<<std::endl;
+        return INTERNAL_ERROR;
+    }
+}
+
+responseType Server::checkCredenziali(const std::string& username, const std::string& password){
+
+    if(credenziali.find(username) != credenziali.end()){  //se esiste la chiave username
+        if(password.compare(credenziali.at(username))==0){
+            std::cout<<"Credenziali corrette. Benvenuto "<<username<<"!"<<std::endl;
+            return OK;
+        }
+        else{
+            std::cout<<"Password errata, "<<username<<"!"<<std::endl;
+            return WRONG_PASSWORD;
+        }
+    }
+    else{
+        std::cout<<"Username non esistente"<<std::endl;
+        return WRONG_USERNAME;
+    }
+
 }
