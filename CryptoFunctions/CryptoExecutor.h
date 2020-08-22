@@ -3,17 +3,17 @@
 //
 
 #pragma once
-#include <string>
+#include <string.h>
 #include <array>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 #include <openssl/rand.h>
 #include <openssl/conf.h>
 #include <openssl/err.h>
-
+#include <vector>
 unsigned int computeHash(std::string const& path,unsigned char md_value[]); //ritorna la lunghezza del digest
 bool compareHash(unsigned char md_value1[],unsigned char md_value2[], int md_len);
 std::pair<unsigned char*,int>  HKDF(std::string const& password, std::string const& salt);
-unsigned char* genRandomBytes(int bytes);
-std::pair<unsigned char*,int> encrypt(std::string const& message,unsigned char* iv,unsigned char* key);
+std::vector<unsigned char> genRandomBytes(int bytes);
+int encrypt(std::string const& message,std::vector<unsigned char> iv,std::vector<unsigned char> key);
 void handleErrors(void);

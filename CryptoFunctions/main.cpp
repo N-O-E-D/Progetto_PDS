@@ -8,9 +8,8 @@ int main(){
     //for(int i = 0; i < md_len; i++)
     //    printf("%02x", md_value[i]);
     //printf("\n");
-    unsigned char* iv=genRandomBytes(16);
-    unsigned char* key= genRandomBytes(32);
-    encrypt("bbbbbbbb",iv,key);
+    std::vector<unsigned char> iv=genRandomBytes(16);
+    std::vector<unsigned char> key= genRandomBytes(32);
+    int  ff=encrypt("bbbbbbbb",iv,key);
     return 0;
 }
-

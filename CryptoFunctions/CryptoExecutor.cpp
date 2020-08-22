@@ -77,30 +77,42 @@ std::pair<unsigned  char* , int> HKDF(std::string const& password,std::string co
     return std::make_pair(out,KEYLEN);
 }
 
-unsigned char* genRandomBytes(int bytes){
+std::vector<unsigned char> genRandomBytes(int bytes){
     int i;
     unsigned char random_string[MAX_BUF];
-
+    std::vector<unsigned char> result;
+    result.resize(bytes);
+    printf("bytes richiesti:%d \n",bytes);
     if(bytes>MAX_BUF){
         printf("Maximum size allowed exxeced. Set to %d\n",MAX_BUF);
         bytes=MAX_BUF;
     }
 
     RAND_bytes(random_string,bytes);
+
+    for (int i=0;i<bytes;i++)
+        result[i]=random_string[i];
+    printf("Lunghezza: %d\n",result.size());
     printf("Sequence generated: ");
-    for(i = 0; i < bytes ; i++)
-        printf("%02x", random_string[i]);
+    for(i = 0; i < result.size() ; i++)
+        printf("%02x", result.at(i));
     printf("\n");
-    return random_string;
+    return result;
 }
 
-std::pair<unsigned char*,int> encrypt(std::string const& message,unsigned char* iv, unsigned char* key){
+int  encrypt(std::string const& message,std::vector<unsigned char> iv, std::vector<unsigned char> key){
 
     EVP_CIPHER_CTX *ctx;
     int len;
+    /* A 256 bit key */
+    unsigned char *key2 = (unsigned char *)"01234567890123456789012345678901";
 
+    /* A 128 bit IV */
+    unsigned char *iv2 = (unsigned char *)"0123456789012345";
     int ciphertext_len;
-    unsigned char ciphertext[BUF_SIZE];
+    unsigned char ciphertext[MAX_BUF];
+    unsigned char *plaintext =
+            (unsigned char *)"The quick brown fox jumps over the lazy dog";
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
@@ -112,17 +124,17 @@ std::pair<unsigned char*,int> encrypt(std::string const& message,unsigned char* 
      * IV size for *most* modes is the same as the block size. For AES this
      * is 128 bits
      */
-    if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+    if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key.data(), iv.data()))
         handleErrors();
 
     /*
      * Provide the message to be encrypted, and obtain the encrypted output.
      * EVP_EncryptUpdate can be called multiple times if necessary
      */
-    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char*) message.data(), message.size()))
+    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext,strlen ((char*)plaintext)))
         handleErrors();
     ciphertext_len = len;
-
+    std::cout<<ciphertext_len<<std::endl;
     /*
      * Finalise the encryption. Further ciphertext bytes may be written at
      * this stage.
@@ -132,12 +144,12 @@ std::pair<unsigned char*,int> encrypt(std::string const& message,unsigned char* 
     ciphertext_len += len;
 
     /* Clean up */
-    //EVP_CIPHER_CTX_free(ctx);
-    //printf("the ciphertext is:\n");
-    //for (int i=0;i<ciphertext_len;i++)
-      //  printf("%c",ciphertext[i]);
+    EVP_CIPHER_CTX_free(ctx);
+    printf("the ciphertext is:\n");
+    for (int i=0;i<ciphertext_len;i++)
+        printf("%02x",ciphertext[i]);
 
-    //return std::make_pair(ciphertext,ciphertext_len);
+    return ciphertext_len;
 
 
 }
