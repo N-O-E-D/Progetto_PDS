@@ -37,7 +37,7 @@ Thread Safe class wrapping a map that contains path as key and sync status as va
 Constructor receive the root path and populates the map with all the sub paths, with the default value NotSynced
 
 ### TODO
-* aggionrare struttura dati dopo comunicazione asincrona -> handler?
-* gestire la saturazione della coda -> tengo le 1024 modifche più recenti e prima di eseguirle faccio sincornizzazione
-* autenticazione 
+* autenticazione -> riprovare/fermare il programma in caso di fallimento
+* spostare creazione di PathStatusMap nel main => passaggio come parametro al fsw
+* gestione degli errori
 * sistemazione del codice 
