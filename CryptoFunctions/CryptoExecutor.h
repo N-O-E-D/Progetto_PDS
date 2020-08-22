@@ -13,7 +13,7 @@
 #include <vector>
 unsigned int computeHash(std::string const& path,unsigned char md_value[]); //ritorna la lunghezza del digest
 bool compareHash(unsigned char md_value1[],unsigned char md_value2[], int md_len);
-std::pair<unsigned char*,int>  HKDF(std::string const& password, std::string const& salt);
+std::vector<unsigned char>  HKDF(std::string const& password, std::vector<unsigned char> const& salt);
 std::vector<unsigned char> genRandomBytes(int bytes);
-int encrypt(std::string const& message,std::vector<unsigned char> iv,std::vector<unsigned char> key);
+std::vector<unsigned char> encrypt(std::string const& message,std::vector<unsigned char> iv,std::vector<unsigned char> key);
 void handleErrors(void);
