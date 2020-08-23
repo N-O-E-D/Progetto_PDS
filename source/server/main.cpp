@@ -202,8 +202,15 @@ int main()
     const std::string username("Bruno");
     const std::string password("passwd3");
     Server s;
-    s.loadUsers(filename);
+    loadUsers(filename);
     s.checkCredenziali(username,password);
+
+
+    std::string user("Bruno");
+    std::string passw;
+    s.UserToPassword(user,passw);
+    std::cout<<passw<<std::endl;
+
     return 0;
-*/
+    */
 }
