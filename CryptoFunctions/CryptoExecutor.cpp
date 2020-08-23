@@ -54,12 +54,13 @@ bool compareHash(unsigned char md_value1[],unsigned char md_value2[], int md_len
         return false;
     return true;
 }
-std::pair<unsigned  char* , int> HKDF(std::string const& password,std::string const& salt){
+std::vector<unsigned char> HKDF(std::string const& password,std::vector<unsigned char> const& salt){
     EVP_PKEY_CTX *pctx;
     unsigned char out[KEYLEN]; //la chiave deve avere lunghezza 32 bytes (poi uso aes-256)
     size_t outlen = sizeof(out);
     pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
-
+    std::vector<unsigned char> result;
+    result.resize(KEYLEN);
     if (EVP_PKEY_derive_init(pctx) <= 0)
         printf("Error during EVP_PKEY_derive_init\n");
         if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256()) <= 0)
@@ -70,11 +71,14 @@ std::pair<unsigned  char* , int> HKDF(std::string const& password,std::string co
                     printf("Error during EVP_PKEY_CTX_set1_hkdf_key\n");
                     if (EVP_PKEY_derive(pctx, out, &outlen) <= 0)
                             printf("Error during EVP_PKEY_derive\n");
+
     printf("La chiave è :\n");
+    for (int i=0;i<KEYLEN;i++)
+        result[i]=out[i];
     for (int i=0;i<KEYLEN;i++){
-        printf("%02x",out[i]);
+        printf("%02x",result[i]);
     }
-    return std::make_pair(out,KEYLEN);
+    return result;
 }
 
 std::vector<unsigned char> genRandomBytes(int bytes){
@@ -82,7 +86,6 @@ std::vector<unsigned char> genRandomBytes(int bytes){
     unsigned char random_string[MAX_BUF];
     std::vector<unsigned char> result;
     result.resize(bytes);
-    printf("bytes richiesti:%d \n",bytes);
     if(bytes>MAX_BUF){
         printf("Maximum size allowed exxeced. Set to %d\n",MAX_BUF);
         bytes=MAX_BUF;
@@ -92,27 +95,19 @@ std::vector<unsigned char> genRandomBytes(int bytes){
 
     for (int i=0;i<bytes;i++)
         result[i]=random_string[i];
-    printf("Lunghezza: %d\n",result.size());
-    printf("Sequence generated: ");
-    for(i = 0; i < result.size() ; i++)
-        printf("%02x", result.at(i));
-    printf("\n");
+
     return result;
 }
 
-int  encrypt(std::string const& message,std::vector<unsigned char> iv, std::vector<unsigned char> key){
+std::vector<unsigned char> encrypt(std::string const& message,std::vector<unsigned char> iv, std::vector<unsigned char> key){
 
     EVP_CIPHER_CTX *ctx;
     int len;
     /* A 256 bit key */
-    unsigned char *key2 = (unsigned char *)"01234567890123456789012345678901";
-
     /* A 128 bit IV */
-    unsigned char *iv2 = (unsigned char *)"0123456789012345";
     int ciphertext_len;
     unsigned char ciphertext[MAX_BUF];
-    unsigned char *plaintext =
-            (unsigned char *)"The quick brown fox jumps over the lazy dog";
+    std::vector<unsigned char> result;
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
@@ -131,10 +126,9 @@ int  encrypt(std::string const& message,std::vector<unsigned char> iv, std::vect
      * Provide the message to be encrypted, and obtain the encrypted output.
      * EVP_EncryptUpdate can be called multiple times if necessary
      */
-    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext,strlen ((char*)plaintext)))
+    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char*) message.data(),message.size()))
         handleErrors();
     ciphertext_len = len;
-    std::cout<<ciphertext_len<<std::endl;
     /*
      * Finalise the encryption. Further ciphertext bytes may be written at
      * this stage.
@@ -146,10 +140,13 @@ int  encrypt(std::string const& message,std::vector<unsigned char> iv, std::vect
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
     printf("the ciphertext is:\n");
+    result.resize(ciphertext_len);
     for (int i=0;i<ciphertext_len;i++)
-        printf("%02x",ciphertext[i]);
+        result[i]=ciphertext[i];
+    for (int i=0;i<result.size();i++)
+        printf("%02x",result[i]);
 
-    return ciphertext_len;
+    return result;
 
 
 }

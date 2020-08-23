@@ -7,7 +7,7 @@
 #include "../../CryptoFunctions/CryptoExecutor.h"
 
 enum messageType{
-    UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH
+    UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH,AUTH_CHALLENGE
 };
 
 class ClientSocket
@@ -20,10 +20,9 @@ public:
 
     ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator);
 
-    /* Modified by GIANDONATO FARINA */
 
     void update(std::string const& path, const std::function<void (std::string)> &action);
-    void updateName(std::string const& path, std::string const& newName);
+    void updateName(std::string const& path, std::string const& newName,const std::function<void (std::string)> &action);
     void remove(std::string const& path, const std::function<void (std::string)> &action);
     //void removeDir(std::string const& path);
     void createFile(std::string const& path, const std::function<void (std::string)> &action);
@@ -40,12 +39,13 @@ private:
     template<class Buffer>
     void writeFileContent(Buffer& t_buffer);
     void buildHeader(messageType mt);
-    void waitResponse(messageType mt);
-    void processResponse(size_t t_bytesTransferred,messageType mt);
-    void analyzeResponse(std::string response,messageType mt);
+    void waitResponse(messageType mt,const std::function<void (std::string)> &action);
+    void processResponse(size_t t_bytesTransferred,messageType mt,const std::function<void (std::string)> &action);
+    void analyzeResponse(std::string response,messageType mt,const std::function<void (std::string)> &action);
     void doAuthentication();
     void waitChallenge();
-    void sendCryptoChallenge();
+    void genCryptoChallenge();
+    void waitCookie();
 
     TcpResolver m_ioService;
     TcpSocket m_socket;
@@ -62,6 +62,7 @@ private:
     messageType m_messageType;
     boost::asio::streambuf m_response;
     std::string m_responseType;
+    std::string m_cryptoChallenge;
     int m_fileSize;
 
 };

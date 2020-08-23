@@ -10,6 +10,7 @@ int main(){
     //printf("\n");
     std::vector<unsigned char> iv=genRandomBytes(16);
     std::vector<unsigned char> key= genRandomBytes(32);
-    int  ff=encrypt("bbbbbbbb",iv,key);
+    std::vector<unsigned char>  ff=encrypt("budello infame",iv,key);
+    //std::vector<unsigned char> hdf=HKDF("ciaoooo",genRandomBytes(32));
     return 0;
 }

@@ -42,15 +42,24 @@ void ClientSocket::waitChallenge(){
                      [this](boost::system::error_code ec, size_t bytes)
                      {
                          if (!ec)
-                             sendCryptoChallenge();
+                             genCryptoChallenge();
                          else
                              std::cout<<"errore in waitChallenge"<<std::endl;
                      });
 }
-void ClientSocket::sendCryptoChallenge(){
-    std::string salt=genRandomBytes(32);
-    auto key= HKDF (m_password,salt);
-    std::string cipherChallange = encrypt(m_buf,reinterpret_cast<unsigned char*>(salt.data()),key.first);
+void ClientSocket::genCryptoChallenge(){
+    std::vector<unsigned char> salt=genRandomBytes(32);
+    std::vector<unsigned char> key= HKDF (m_password,salt);
+    std::vector<unsigned char>iv=genRandomBytes(16);
+    std::string message(m_buf.begin(),m_buf.end());
+    std::vector<unsigned char> cipherChallenge = encrypt(message,iv,key);
+    for(int i=0;i<cipherChallenge.size();i++)
+        m_cryptoChallenge[i]=(char) cipherChallenge[i];
+    buildHeader(AUTH_CHALLENGE);
+    writeHeader(m_request);
+    waitCookie();
+}
+void ClientSocket::waitCookie(){
 
 }
 void ClientSocket::openFile(std::string const& t_path)
@@ -140,6 +149,8 @@ void ClientSocket::buildHeader(messageType mt){
         case AUTH:
             requestStream << "AUTH\n" << m_username<<"\n\n";
             break;
+        case AUTH_CHALLENGE:
+            requestStream <<"AUTH_CHALLENGE\n" << m_cryptoChallenge <<"\n\n";
         default:
             return;
             break;
@@ -152,28 +163,28 @@ void ClientSocket::buildHeader(messageType mt){
     BOOST_LOG_TRIVIAL(trace) << "Request header size: " << m_request.size();
     }
 
-void ClientSocket::update(const std::string &path) {
+void ClientSocket::update(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=UPDATE;
     openFile(m_path);
     buildHeader(UPDATE);
     doConnect();
-    waitResponse(UPDATE);
+    waitResponse(UPDATE,action);
 }
-void ClientSocket::updateName(const std::string &path,std::string const& newName) {
+void ClientSocket::updateName(const std::string &path,std::string const& newName,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=UPDATE_NAME;
     m_newName=newName;
     buildHeader(UPDATE_NAME);
     doConnect();
-    waitResponse(UPDATE_NAME);
+    waitResponse(UPDATE_NAME,action);
 }
-void ClientSocket::remove(const std::string &path) {
+void ClientSocket::remove(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=REMOVE;
     buildHeader(REMOVE);
     doConnect();
-    waitResponse(REMOVE);
+    waitResponse(REMOVE,action);
 }
 /*void ClientSocket::removeDir(const std::string &path) {
     m_path=path;
@@ -182,29 +193,29 @@ void ClientSocket::remove(const std::string &path) {
     doConnect();
     waitResponse(REMOVE_DIR);
 }*/
-void ClientSocket::createFile(const std::string &path) {
+void ClientSocket::createFile(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=CREATE_FILE;
     openFile(m_path);
     buildHeader(CREATE_FILE);
     doConnect();
-    waitResponse(CREATE_FILE);
+    waitResponse(CREATE_FILE,action);
 }
-void ClientSocket::createDir(const std::string &path) {
+void ClientSocket::createDir(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=CREATE_DIR;
     buildHeader(CREATE_DIR);
     doConnect();
-    waitResponse(CREATE_DIR);
+    waitResponse(CREATE_DIR,action);
 }
-void ClientSocket::syncDir(std::string const& path){
+void ClientSocket::syncDir(std::string const& path,const std::function<void (std::string)> &action){
     m_path=path;
     m_messageType=SYNC_DIR;
     buildHeader(SYNC_DIR);
     doConnect();
-    waitResponse(SYNC_DIR);
+    waitResponse(SYNC_DIR,action);
 }
-void ClientSocket::syncFile(std::string const& path){
+void ClientSocket::syncFile(std::string const& path,const std::function<void (std::string)> &action){
     m_path=path;
     m_messageType=SYNC_FILE;
 
@@ -223,7 +234,7 @@ void ClientSocket::syncFile(std::string const& path){
         printf("%02x", (unsigned char)sName[i]);
     buildHeader(SYNC_FILE);
     doConnect();
-    waitResponse(SYNC_FILE);
+    waitResponse(SYNC_FILE,action);
 }
 template<class Buffer>
 void ClientSocket::writeHeader(Buffer& t_buffer)
@@ -248,66 +259,68 @@ void ClientSocket::writeFileContent(Buffer& t_buffer)
                              });
     };
 
-void ClientSocket::waitResponse (messageType mt){
+void ClientSocket::waitResponse (messageType mt,const std::function<void (std::string)> &action){
     async_read_until(m_socket, m_response, "\n\n",
-                     [this,mt](boost::system::error_code ec, size_t bytes)
+                     [this,mt,action](boost::system::error_code ec, size_t bytes)
                      {
                          if (!ec)
-                             processResponse(bytes,mt);
+                             processResponse(bytes,mt,action);
                          else
                              std::cout<<"errore in waitResponse"<<std::endl;
                      });
 }
-void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt){
+void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt,const std::function<void (std::string)> &action){
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
-    analyzeResponse(m_responseType,mt);
+    analyzeResponse(m_responseType,mt,action);
 }
-void ClientSocket::analyzeResponse(std::string response, messageType mt){
-    if (response=="OK")
-        std::cout<<"Server ha risposto con OK , tutto è andato a buon fine"<<std::endl;
+void ClientSocket::analyzeResponse(std::string response, messageType mt,const std::function<void (std::string)> &action){
+    if (response=="OK") {
+        std::cout << "Server ha risposto con OK , tutto è andato a buon fine" << std::endl;
+        action(m_path);
+    }
     if (response=="INTERNAL_ERROR") { //ritento
         std::cout<<"Server ha risposto con internal error. Qaulcosa è andato stroto , ritento"<<std::endl;
         switch (mt){
             case UPDATE:
-                update(m_path);
+                update(m_path,action);
                 break;
             case UPDATE_NAME:
-                updateName(m_path,m_newName);
+                updateName(m_path,m_newName,action);
                 break;
             case REMOVE:
-                remove(m_path);
+                remove(m_path,action);
                 break;
             /*case REMOVE_DIR:
                 removeDir(m_path);
                 break;*/
             case CREATE_FILE:
-                createFile(m_path);
+                createFile(m_path,action);
                 break;
             case CREATE_DIR:
-                createDir(m_path);
+                createDir(m_path,action);
                 break;
             case SYNC_FILE:
-                syncFile(m_path);
+                syncFile(m_path,action);
                 break;
             case SYNC_DIR:
-                syncDir(m_path);
+                syncDir(m_path,action);
                 break;
         }
     }
     if (response=="NOT_PRESENT"){
         std::cout<<"Server ha risposto con not present"<<std::endl;
         if(mt==SYNC_FILE)
-            createFile(m_path);
+            createFile(m_path,action);
         if(mt==SYNC_DIR)
-            createDir(m_path);
+            createDir(m_path,action);
         if(mt==UPDATE)
-            createFile(m_path);
+            createFile(m_path,action);
         if(mt==UPDATE_NAME)
-            createFile(m_path);
+            createFile(m_path,action);
     }
     if (response=="OLD_VERSION") {
         std::cout<<"Server ha risposto con old version"<<std::endl;
-        update(m_path);
+        update(m_path,action);
     }
 }
