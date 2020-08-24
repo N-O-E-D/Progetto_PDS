@@ -234,6 +234,18 @@ responseType Server::checkCredenziali(const std::string& username, const std::st
 
 }
 
+responseType Server::checkCredenziali(const std::string& username){
+
+    if(credenziali.find(username) != credenziali.end()){  //se esiste la chiave username
+        std::cout<<"Username corretto"<<std::endl;
+        return OK;
+    }
+    else{
+        std::cout<<"Username non esistente"<<std::endl;
+        return WRONG_USERNAME;
+    }
+}
+
 responseType Server::UserToPassword(const std::string& username, std::string& password){
     if(credenziali.find(username) != credenziali.end()) {  //se esiste la chiave username
         password=credenziali.at(username);

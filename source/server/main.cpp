@@ -205,12 +205,12 @@ int main()
     loadUsers(filename);
     s.checkCredenziali(username,password);
 
-
+    s.checkCredenziali(username);
     std::string user("Bruno");
     std::string passw;
     s.UserToPassword(user,passw);
     std::cout<<passw<<std::endl;
 
     return 0;
-    */
+*/
 }
