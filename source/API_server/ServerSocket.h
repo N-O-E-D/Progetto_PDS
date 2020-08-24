@@ -29,16 +29,23 @@ private:
     void handleError(std::string const& t_functionName, boost::system::error_code const& t_ec);
     void manageMessage(std::string const& messageType);
     void sendToClient(responseType rt);
-
+    void genChallenge();
+    void waitCryptoChallenge();
+    void parseAndDecryptCryptoChallenge();
     TcpSocket m_socket;
     std::vector<char> m_buf;
     boost::asio::streambuf m_requestBuf_;
+    boost::asio::streambuf requestBuf;
     boost::asio::streambuf m_response;
     std::ofstream m_outputFile;
     size_t m_fileSize;
     std::string m_pathName;
     std::string m_messageType;
     std::string m_newName;
+    std::string m_username;
+    std::string m_challenge;
+    std::string m_cryptoChallenge;
+    std::string m_iv;
     std::string m_mdvalue;
     std::vector<char> m_file;
     Server m_server;

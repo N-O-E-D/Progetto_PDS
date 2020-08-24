@@ -17,50 +17,64 @@ ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpoin
 void ClientSocket::authenticate(std:: string const& username, std::string const& password){
     m_password=password;
     m_username=username;
+    m_messageType=AUTH;
     buildHeader(AUTH);
-    doAuthentication();
+    doConnect();
+    std::cout<<"Aspetto la sfida"<<std::endl;
+    waitChallenge();
 }
-void ClientSocket::doAuthentication(){
-    boost::asio::async_connect(m_socket, m_endpointIterator,
-                               [this](boost::system::error_code ec, TcpResolverIterator)
-                               {
-                                   if (!ec) {
-                                       //invio l'header di autenticazione
-                                       writeHeader(m_request);
-                                       waitChallenge();
 
-                                   } else {
-                                       std::cout << "Couldn't connect to host. Please run server "
-                                                    "or check network connection.\n";
-                                       BOOST_LOG_TRIVIAL(error) << "Error: " << ec.message();
-                                   }
-                               });
-
-}
 void ClientSocket::waitChallenge(){
+    m_buf.resize(LENGTHCHALLENGE);
     m_socket.async_read_some(boost::asio::buffer(m_buf.data(), LENGTHCHALLENGE),
+                             [this](boost::system::error_code ec, size_t bytes)
+                             {
+                                    if (!ec)
+                                        genCryptoChallenge();
+                                    else
+                                        std::cout<<"errore in waitChallenge : "<<ec.message()<<std::endl;
+                             });
+
+
+}
+void ClientSocket::genCryptoChallenge(){
+    std::string message(m_buf.begin(),m_buf.end());
+    //debug
+    printf("La challenge ricevuta è:\n");
+    for (int i=0;i<message.size();i++)
+        printf("%02x",message[i]);
+    printf("\n");
+    //fine debug
+    std::vector<unsigned char>iv=genRandomBytes(16);
+    std::vector<unsigned char> key= HKDF (m_password,iv);
+    std::vector<unsigned char> cipherChallenge = encrypt(message,iv,key);
+    m_cryptoChallenge.resize(cipherChallenge.size());
+    m_iv.resize(iv.size());
+    for(int i=0;i<cipherChallenge.size();i++)
+        m_cryptoChallenge[i]=(char) cipherChallenge[i];
+    for(int i=0;i<iv.size();i++)
+        m_iv[i]=(char) iv[i];
+    m_messageType=AUTH_CHALLENGE;
+    buildHeader(AUTH_CHALLENGE);
+    writeHeader(m_request);
+    //waitCookie();
+}
+void ClientSocket::waitCookie(){
+    async_read_until(m_socket, m_response, "\n\n",
                      [this](boost::system::error_code ec, size_t bytes)
                      {
                          if (!ec)
-                             genCryptoChallenge();
+                             processResponseCookie();
                          else
-                             std::cout<<"errore in waitChallenge"<<std::endl;
+                             std::cout<<"errore in waitCookie: "<<ec.message()<<std::endl;
                      });
 }
-void ClientSocket::genCryptoChallenge(){
-    std::vector<unsigned char> salt=genRandomBytes(32);
-    std::vector<unsigned char> key= HKDF (m_password,salt);
-    std::vector<unsigned char>iv=genRandomBytes(16);
-    std::string message(m_buf.begin(),m_buf.end());
-    std::vector<unsigned char> cipherChallenge = encrypt(message,iv,key);
-    for(int i=0;i<cipherChallenge.size();i++)
-        m_cryptoChallenge[i]=(char) cipherChallenge[i];
-    buildHeader(AUTH_CHALLENGE);
-    writeHeader(m_request);
-    waitCookie();
-}
-void ClientSocket::waitCookie(){
-
+void ClientSocket::processResponseCookie(){
+    std::istream responseStream(&m_response);
+    responseStream >> m_responseType;
+    if(m_responseType=="OK")
+        std::cout<<"autenticato\n";
+    else std::cout<<"non autenticato\n";
 }
 void ClientSocket::openFile(std::string const& t_path)
 {
@@ -150,7 +164,8 @@ void ClientSocket::buildHeader(messageType mt){
             requestStream << "AUTH\n" << m_username<<"\n\n";
             break;
         case AUTH_CHALLENGE:
-            requestStream <<"AUTH_CHALLENGE\n" << m_cryptoChallenge <<"\n\n";
+            requestStream <<"AUTH_CHALLENGE\n" <<std::to_string(m_iv.size())<<"\n"<< std::to_string(m_cryptoChallenge.size()) <<"\n\n"/*<<m_iv+m_cryptoChallenge*/;
+            break;
         default:
             return;
             break;
@@ -237,15 +252,16 @@ void ClientSocket::syncFile(std::string const& path,const std::function<void (st
     waitResponse(SYNC_FILE,action);
 }
 template<class Buffer>
-void ClientSocket::writeHeader(Buffer& t_buffer)
-{
+void ClientSocket::writeHeader(Buffer& t_buffer) {
     boost::asio::async_write(m_socket,
                              t_buffer,
-                             [this](boost::system::error_code ec, size_t )
-                             {
-                                std::cout<<"header inviato"<<std::endl;
-                                });
-                             };
+                             [this](boost::system::error_code ec, size_t) {
+                                 if(!ec) {
+                                     std::cout << "header inviato" << std::endl;
+
+                                 }
+                             });
+}
 
 template<class Buffer>
 void ClientSocket::writeFileContent(Buffer& t_buffer)

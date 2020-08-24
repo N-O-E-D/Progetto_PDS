@@ -75,9 +75,9 @@ std::vector<unsigned char> HKDF(std::string const& password,std::vector<unsigned
     printf("La chiave è :\n");
     for (int i=0;i<KEYLEN;i++)
         result[i]=out[i];
-    for (int i=0;i<KEYLEN;i++){
+    for (int i=0;i<KEYLEN;i++)
         printf("%02x",result[i]);
-    }
+    printf("\n");
     return result;
 }
 
@@ -145,8 +145,55 @@ std::vector<unsigned char> encrypt(std::string const& message,std::vector<unsign
         result[i]=ciphertext[i];
     for (int i=0;i<result.size();i++)
         printf("%02x",result[i]);
-
+    printf("\n");
     return result;
+}
+std::vector<unsigned char> decrypt(std::string const& ciphertext,std::vector<unsigned char> iv,std::vector<unsigned char> key){
+    EVP_CIPHER_CTX *ctx;
 
+    int len;
 
+    int plaintext_len;
+    unsigned char plaintext[MAX_BUF];
+    std::vector<unsigned char> result;
+    /* Create and initialise the context */
+    if(!(ctx = EVP_CIPHER_CTX_new()))
+        handleErrors();
+
+    /*
+     * Initialise the decryption operation. IMPORTANT - ensure you use a key
+     * and IV size appropriate for your cipher
+     * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+     * IV size for *most* modes is the same as the block size. For AES this
+     * is 128 bits
+     */
+    if(1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key.data(), iv.data()))
+        handleErrors();
+
+    /*
+     * Provide the message to be decrypted, and obtain the plaintext output.
+     * EVP_DecryptUpdate can be called multiple times if necessary.
+     */
+    if(1 != EVP_DecryptUpdate(ctx, plaintext, &len, (unsigned char*) ciphertext.data(), ciphertext.size()))
+        handleErrors();
+    plaintext_len = len;
+
+    /*
+     * Finalise the decryption. Further plaintext bytes may be written at
+     * this stage.
+     */
+    if(1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len))
+        handleErrors();
+    plaintext_len += len;
+
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+    printf("the plaintext is:\n");
+    result.resize(plaintext_len);
+    for (int i=0;i<plaintext_len;i++)
+        result[i]=plaintext[i];
+    for (int i=0;i<result.size();i++)
+        printf("%c",result[i]);
+    printf("\n");
+    return result;
 }

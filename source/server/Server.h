@@ -21,7 +21,7 @@
 #include <fstream>
 
 enum responseType{
-    OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR, WRONG_PASSWORD, WRONG_USERNAME
+    OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR, WRONG_PASSWORD, WRONG_USERNAME, CHALLENGE
 };
 
 responseType loadUsers(const std::string& filename);

@@ -42,11 +42,10 @@ private:
     void waitResponse(messageType mt,const std::function<void (std::string)> &action);
     void processResponse(size_t t_bytesTransferred,messageType mt,const std::function<void (std::string)> &action);
     void analyzeResponse(std::string response,messageType mt,const std::function<void (std::string)> &action);
-    void doAuthentication();
     void waitChallenge();
     void genCryptoChallenge();
     void waitCookie();
-
+    void processResponseCookie();
     TcpResolver m_ioService;
     TcpSocket m_socket;
     TcpResolverIterator m_endpointIterator;
@@ -58,11 +57,13 @@ private:
     std::string m_path;
     std::string m_newName;
     std::string m_mdvalue;
+    std::string m_iv;
     unsigned int m_mdlen;
     messageType m_messageType;
     boost::asio::streambuf m_response;
     std::string m_responseType;
     std::string m_cryptoChallenge;
+
     int m_fileSize;
 
 };
