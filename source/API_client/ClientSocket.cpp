@@ -57,6 +57,16 @@ void ClientSocket::genCryptoChallenge(){
     m_messageType=AUTH_CHALLENGE;
     buildHeader(AUTH_CHALLENGE);
     writeHeader(m_request);
+    std::vector<unsigned char> ss;
+    ss.insert(ss.end(),iv.begin(),iv.end());
+    ss.insert(ss.end(),cipherChallenge.begin(),cipherChallenge.end());
+    //debug
+    for (int i=0;i<iv.size()+cipherChallenge.size();i++)
+        printf("%02x",ss[i]);
+    printf("\n");
+    //fine debug
+    auto buf = boost::asio::buffer(ss.data(), iv.size()+cipherChallenge.size());
+    writeFileContent(buf);
     //waitCookie();
 }
 void ClientSocket::waitCookie(){
@@ -164,7 +174,7 @@ void ClientSocket::buildHeader(messageType mt){
             requestStream << "AUTH\n" << m_username<<"\n\n";
             break;
         case AUTH_CHALLENGE:
-            requestStream <<"AUTH_CHALLENGE\n" <<std::to_string(m_iv.size())<<"\n"<< std::to_string(m_cryptoChallenge.size()) <<"\n\n"/*<<m_iv+m_cryptoChallenge*/;
+            requestStream <<"AUTH_CHALLENGE\n" <<std::to_string(m_iv.size())<<"\n"<< std::to_string(m_cryptoChallenge.size()) <<"\n\n";
             break;
         default:
             return;

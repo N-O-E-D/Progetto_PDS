@@ -60,34 +60,54 @@ void Session::processRead(size_t t_bytesTransferred)
     else if(m_messageType=="AUTH_CHALLENGE"){
         std::cout<<"Sto leggendo l'iv e la challenge cifrata..."<<std::endl;
         auto self = shared_from_this();
-        m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_iv.size()+m_cryptoChallenge.size()),
+        m_buf.clear();
+        m_buf.resize(m_iv.size()+m_cryptoChallenge.size());
+        std::cout<<m_buf.size()<<std::endl;
+        m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_buf.size()),
                                  [this, self](boost::system::error_code ec, size_t bytes) {
                                      if (!ec)
                                          parseAndDecryptCryptoChallenge();
+                                     else std::cout<<"Errore nella lettura dell'iv e della challenge cifrata : "<<ec.message()<<std::endl;
                                  });
     }
     else manageMessage(m_messageType);
 }
 void Session::parseAndDecryptCryptoChallenge(){
-    std::string buf_string(m_buf.data());
-    std::string iv(buf_string.begin(),buf_string.begin()+m_iv.size());
-    std::string cryptoChallenge(buf_string.begin()+m_iv.size(),buf_string.begin()+m_iv.size()+m_cryptoChallenge.size());
-    m_iv.insert(0,iv);
-    m_cryptoChallenge.insert(0,cryptoChallenge);
-    std::cout<<"Ho letto iv : "<<std::hex<<m_iv<<" e la challenge cifrata:" <<std::hex << m_cryptoChallenge<<std::endl;
+    //debug
+    printf("ho ricevuto: \n");
+    for (int i=0;i<m_iv.size()+m_cryptoChallenge.size();i++)
+        printf("%02x",(unsigned char)m_buf[i]);
+    printf("\n");
+    //fine debug
     std::vector<unsigned char> iv_vect;
-    iv_vect.resize(iv.size());
-    for (int i=0;i<iv.size();i++)
-        iv_vect[i]=(unsigned char) iv[i];
-    std::vector<unsigned char> key=HKDF("chiave", iv_vect);
-    std::vector<unsigned char> dec_challenge=decrypt(m_cryptoChallenge,iv_vect,key);
+    std::vector<unsigned char> cc_vect;
+    cc_vect.resize(m_cryptoChallenge.size());
+    iv_vect.resize(m_iv.size());
+    for (int i=0;i<m_iv.size();i++)
+        iv_vect[i]=(unsigned char) m_buf[i];
+    for (int i=m_iv.size();i<m_iv.size()+m_cryptoChallenge.size();i++)
+        cc_vect[i-m_iv.size()]=(unsigned char) m_buf[i];
+    //debug
+    printf("Ho letto iv: \n");
+    for (int i=0;i<m_iv.size();i++)
+        printf("%02x",iv_vect[i]);
+    printf("\n");
+    printf("Ho letto la sfida cifrata: \n");
+    for (int i=0;i<cc_vect.size();i++)
+        printf("%02x",cc_vect[i]);
+    printf("\n");
+    //fine debug
+    std::vector<unsigned char> key=HKDF("chiave123", iv_vect);
+    std::cout<<"Lunghezza chiave : "<<key.size()<<std::endl;
+    std::vector<unsigned char> dec_challenge=decrypt(cc_vect,iv_vect,key);
     std::string dec_str_challenge;
     dec_str_challenge.resize(dec_challenge.size());
     for (int i=0;i<dec_str_challenge.size();i++)
         dec_str_challenge[i] = (char) dec_challenge[i];
-    if(m_challenge.compare(dec_str_challenge))
+    if(m_challenge.compare(dec_str_challenge)==0)
         std::cout<<"AUTENTICAZIONE RIUSCITA"<<std::endl;
     else std::cout<<"AUTENTICAZIONE FALLITA"<<std::endl;
+
 }
 void Session::genChallenge(){
     std::vector<unsigned char> challenge = genRandomBytes(LENGTHCHALLENGE);
@@ -108,24 +128,19 @@ void Session::genChallenge(){
     //std::cout<<m_requestBuf_.size()<<std::endl;
     //sendToClient(CHALLENGE);
     std::cout<<"dimensione bufRequest : "<<requestBuf.size()<<std::endl;
+    m_requestBuf_.consume(m_requestBuf_.size());
+    auto self=shared_from_this();
     boost::asio::async_write(m_socket,
                              buf,
-                             [this](boost::system::error_code ec, size_t bytes)
+                             [this,self](boost::system::error_code ec, size_t bytes)
                              {
                                  std::cout<<"challenge inviata, aspetto la challenge cifrata..."<<std::endl;
-                                 async_read_until(m_socket,requestBuf, "\n\n",
-                                                  [this](boost::system::error_code ec, size_t bytes)
+                                 async_read_until(m_socket,m_requestBuf_, "\n\n",
+                                                  [this,self](boost::system::error_code ec, size_t bytes)
                                                   {
                                                       if (!ec) {
                                                           std::cout<<"ho ricevuto la sfida cifrata, ora elaboro..."<<std::endl;
-                                                          //debug
-                                                            auto bufs=requestBuf.data();
-                                                            std::cout<<"dimensione bufRequest : "<<requestBuf.size()<<std::endl;
-                                                            std::cout<<"HEADER"<<std::endl;
-                                                            std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+requestBuf.size());
-                                                            std::cout<<"FINE HEADER"<<std::endl;
-                                                            //fine debug
-                                                          //processRead(bytes);
+                                                          processRead(bytes);
                                                       }
                                                       else
                                                           //handleError(__FUNCTION__, ec);

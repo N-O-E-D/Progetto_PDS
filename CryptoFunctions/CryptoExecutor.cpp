@@ -99,7 +99,7 @@ std::vector<unsigned char> genRandomBytes(int bytes){
     return result;
 }
 
-std::vector<unsigned char> encrypt(std::string const& message,std::vector<unsigned char> iv, std::vector<unsigned char> key){
+std::vector<unsigned char> encrypt(std::string & message,std::vector<unsigned char> iv, std::vector<unsigned char> key){
 
     EVP_CIPHER_CTX *ctx;
     int len;
@@ -108,10 +108,16 @@ std::vector<unsigned char> encrypt(std::string const& message,std::vector<unsign
     int ciphertext_len;
     unsigned char ciphertext[MAX_BUF];
     std::vector<unsigned char> result;
+    std::string padding;
+    std::cout<<message.size()<<std::endl;
+    padding.resize(28);
+    for (int i=0;i<padding.size();i++)
+        padding[i]=0;
+    message+=padding;
+    std::cout<<message.size()<<std::endl;
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
-
     /*
      * Initialise the encryption operation. IMPORTANT - ensure you use a key
      * and IV size appropriate for your cipher
@@ -121,7 +127,7 @@ std::vector<unsigned char> encrypt(std::string const& message,std::vector<unsign
      */
     if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key.data(), iv.data()))
         handleErrors();
-
+    EVP_CIPHER_CTX_set_padding(ctx,0);
     /*
      * Provide the message to be encrypted, and obtain the encrypted output.
      * EVP_EncryptUpdate can be called multiple times if necessary
@@ -148,7 +154,7 @@ std::vector<unsigned char> encrypt(std::string const& message,std::vector<unsign
     printf("\n");
     return result;
 }
-std::vector<unsigned char> decrypt(std::string const& ciphertext,std::vector<unsigned char> iv,std::vector<unsigned char> key){
+std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,std::vector<unsigned char> iv,std::vector<unsigned char> key){
     EVP_CIPHER_CTX *ctx;
 
     int len;
@@ -159,7 +165,6 @@ std::vector<unsigned char> decrypt(std::string const& ciphertext,std::vector<uns
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
-
     /*
      * Initialise the decryption operation. IMPORTANT - ensure you use a key
      * and IV size appropriate for your cipher
@@ -169,12 +174,12 @@ std::vector<unsigned char> decrypt(std::string const& ciphertext,std::vector<uns
      */
     if(1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key.data(), iv.data()))
         handleErrors();
-
+    EVP_CIPHER_CTX_set_padding(ctx,0);
     /*
      * Provide the message to be decrypted, and obtain the plaintext output.
      * EVP_DecryptUpdate can be called multiple times if necessary.
      */
-    if(1 != EVP_DecryptUpdate(ctx, plaintext, &len, (unsigned char*) ciphertext.data(), ciphertext.size()))
+    if(1 != EVP_DecryptUpdate(ctx, plaintext, &len,ciphertext.data(), ciphertext.size()))
         handleErrors();
     plaintext_len = len;
 
@@ -182,18 +187,20 @@ std::vector<unsigned char> decrypt(std::string const& ciphertext,std::vector<uns
      * Finalise the decryption. Further plaintext bytes may be written at
      * this stage.
      */
-    if(1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len))
-        handleErrors();
+    if (1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len))
+            handleErrors();
+
     plaintext_len += len;
 
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
+    printf("the plaintext length is: %d\n",plaintext_len-28);
     printf("the plaintext is:\n");
-    result.resize(plaintext_len);
+    result.resize(plaintext_len-28);
     for (int i=0;i<plaintext_len;i++)
         result[i]=plaintext[i];
     for (int i=0;i<result.size();i++)
-        printf("%c",result[i]);
+        printf("%02x",result[i]);
     printf("\n");
     return result;
 }
