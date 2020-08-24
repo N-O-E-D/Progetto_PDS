@@ -39,6 +39,7 @@ public:
     responseType syncFile(std::string const& path,unsigned char* md_value,unsigned int md_len);
 
     responseType checkCredenziali(const std::string& username, const std::string& password);
+    responseType checkCredenziali(const std::string& username);
     responseType UserToPassword(const std::string& username, std::string& password);
 };
 
