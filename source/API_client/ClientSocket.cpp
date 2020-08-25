@@ -32,7 +32,7 @@ responseType ClientSocket::authenticate(std:: string const& username, std::strin
     std::cout<<"Header inviato."<<std::endl;
     std::cout<<"Aspetto la sfida"<<std::endl;
     rt=waitChallenge();
-    if(rt==CONNECTION_ERROR)
+    if(rt==CONNECTION_ERROR || rt==WRONG_USERNAME)
         return rt;
     std::cout<<"Sfida ricevuta."<<std::endl;
     std::cout<<"Genero la sfida cifrata e la invio..."<<std::endl;
@@ -44,6 +44,7 @@ responseType ClientSocket::authenticate(std:: string const& username, std::strin
     rt=waitResponseSync();
     if(rt==CONNECTION_ERROR)
         return rt;
+    return processResponseSync();
 
 }
 template<class Buffer>
@@ -65,24 +66,26 @@ responseType ClientSocket::doConnectSync() {
     }
     return OK;
 }
-responseType ClientSocket::waitChallenge(){
+responseType ClientSocket::waitChallenge() {
     m_buf.resize(LENGTHCHALLENGE);
     boost::system::error_code error;
-    m_socket.read_some(boost::asio::buffer(m_buf.data(), LENGTHCHALLENGE),error);
-    if(error) {
+    responseType rt;
+    read_until(m_socket, m_response, "\n\n",error);
+    if (error) {
+        std::cout << "Connection error during waitChallenge" << std::endl;
+        return CONNECTION_ERROR;
+    }
+    rt=processResponseSync();
+    if(rt==WRONG_USERNAME) {
+        std::cout<<"Wrong username!"<<std::endl;
+        return rt;
+    }
+    m_socket.read_some(boost::asio::buffer(m_buf.data(), LENGTHCHALLENGE), error);
+    if (error) {
         std::cout << "Connection error during waitChallenge" << std::endl;
         return CONNECTION_ERROR;
     }
     return OK;
-    /*[this](boost::system::error_code ec, size_t bytes)
-                             {
-                                    if (!ec)
-                                        genCryptoChallenge();
-                                    else
-                                        std::cout<<"errore in waitChallenge : "<<ec.message()<<std::endl;
-                             });*/
-
-
 }
 responseType ClientSocket::genCryptoChallenge(){
     std::string message(m_buf.begin(),m_buf.end());
@@ -119,13 +122,6 @@ responseType ClientSocket::genCryptoChallenge(){
 responseType ClientSocket::waitResponseSync(){
     boost::system::error_code error;
     read_until(m_socket, m_response, "\n\n",error);
-                     /*[this,mt,action](boost::system::error_code ec, size_t bytes)
-                     {
-                         if (!ec)
-                             processResponse(bytes,mt,action);
-                         else
-                             std::cout<<"errore in waitResponse"<<std::endl;
-                     });*/
     if (error) {
         std::cout << "Connection error during doConnectSync" << std::endl;
         return CONNECTION_ERROR;
@@ -135,6 +131,10 @@ responseType ClientSocket::waitResponseSync(){
 responseType ClientSocket::processResponseSync(){
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
+    if(m_responseType=="OK") {
+        std::cout << "Ok" << std::endl;
+        return OK;
+    }
     if(m_responseType=="WRONG_USERNAME") {
         std::cout << "Username errato!" << std::endl;
         return WRONG_USERNAME;

@@ -37,7 +37,7 @@ void FileSystemWatcher::start(const std::function<void(std::string, Status)> &ac
                     action(file.path().string(), Status::DirCreated);
                 else
                     action(file.path().string(), Status::FileCreated);
-            // File modification
+                // File modification
             } else {
                 if(paths_[file.path().string()] != current_file_last_write_time) {
                     paths_[file.path().string()] = current_file_last_write_time;

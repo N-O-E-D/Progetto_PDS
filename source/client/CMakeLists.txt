@@ -7,7 +7,7 @@ add_executable(client main.cpp ../API_client/ClientSocket.cpp ../API_client/Clie
 
 # OpenSSL Libraries
 #set(OPENSSL_ROOT_DIR /usr/local/Cellar/openssl@1.1/1.1.1g) #for OpenSSL installed with brew on macOS
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL)
 if(OpenSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
     target_link_libraries(client ${OPENSSL_LIBRARIES})
@@ -16,18 +16,12 @@ else()
 endif()
 
 # Boost Libraries
-find_package(Boost COMPONENTS log log_setup thread filesystem system REQUIRED)
+find_package(Boost COMPONENTS thread system filesystem log log_setup REQUIRED)
+set (CMAKE_CXX_FLAGS "-g -Wall -DBOOST_LOG_DYN_LINK")
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
-    target_link_libraries(client
-            ${Boost_LOG_SETUP_LIBRARY}
-            ${Boost_LOG_LIBRARY}
-            ${Boost_FILESYSTEM_LIBRARY}
-            ${Boost_THREAD_LIBRARY}
-            ${Boost_SYSTEM_LIBRARY}
-            )
+    target_link_libraries(client ${Boost_LIBRARIES})
 else()
     message(FATAL_ERROR "Could not find Boost")
 endif()
-
 

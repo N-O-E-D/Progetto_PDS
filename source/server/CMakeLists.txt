@@ -4,6 +4,7 @@ project(server)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS -pthread)
 
+include_directories(../../HashExecutor)
 add_executable(server main.cpp Server.cpp Server.h ../../CryptoFunctions/CryptoExecutor.cpp ../../CryptoFunctions/CryptoExecutor.h ../API_server/ServerSocket.cpp ../API_server/ServerSocket.h)
 
 # OpenSSL Libraries

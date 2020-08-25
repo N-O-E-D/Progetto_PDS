@@ -56,8 +56,10 @@ void Session::processRead(size_t t_bytesTransferred)
                                  });
     }
     else if(m_messageType=="AUTH") {
-        if(m_server.checkCredenziali(m_username)==OK)
+        if(m_server.checkCredenziali(m_username)==OK) {
+            sendToClient(OK);
             genChallenge();
+        }
         else sendToClient(WRONG_USERNAME);
     }
     else if(m_messageType=="AUTH_CHALLENGE"){
