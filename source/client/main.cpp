@@ -48,7 +48,7 @@ void removeHandler(const std::string& path){
 // program folder address port [time]
 int main(int argc, char** argv) {
     // 0. Checking parameters
-    if(argc < 4) {
+    if (argc < 4) {
         std::cerr << "Not enough parameters\n";
         return -1;
     }
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     // 2. Open socket (MODIFIED BY LORENZO)
     boost::asio::io_service ioService;
     boost::asio::ip::tcp::resolver resolver(ioService);
-    auto endpointIterator = resolver.resolve({ address, port });
+    auto endpointIterator = resolver.resolve({address, port});
     ClientSocket socket(ioService, endpointIterator);
     ioService.run();
 
