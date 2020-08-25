@@ -197,7 +197,7 @@ std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,
     printf("the plaintext length is: %d\n",plaintext_len-28);
     printf("the plaintext is:\n");
     result.resize(plaintext_len-28);
-    for (int i=0;i<plaintext_len;i++)
+    for (int i=0;i<plaintext_len-28;i++)
         result[i]=plaintext[i];
     for (int i=0;i<result.size();i++)
         printf("%02x",result[i]);

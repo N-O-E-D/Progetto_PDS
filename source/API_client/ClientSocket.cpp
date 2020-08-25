@@ -67,7 +67,7 @@ void ClientSocket::genCryptoChallenge(){
     //fine debug
     auto buf = boost::asio::buffer(ss.data(), iv.size()+cipherChallenge.size());
     writeFileContent(buf);
-    //waitCookie();
+    waitResponse(AUTH,[](std::string s) ->void { });
 }
 void ClientSocket::waitCookie(){
     async_read_until(m_socket, m_response, "\n\n",
@@ -349,4 +349,8 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
         std::cout<<"Server ha risposto con old version"<<std::endl;
         update(m_path,action);
     }
+    if(response=="WRONG_USERNAME")
+        std::cout<<"Username errato!"<<std::endl;
+    if(response=="WRONG_PASSWORD")
+        std::cout<<"Password errata!"<<std::endl;
 }

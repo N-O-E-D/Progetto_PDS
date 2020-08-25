@@ -55,8 +55,11 @@ void Session::processRead(size_t t_bytesTransferred)
                                          doReadFileContent(bytes);
                                  });
     }
-    else if(m_messageType=="AUTH")
+    else if(m_messageType=="AUTH") {
+        if(m_server.checkCredenziali(m_username)==OK)
             genChallenge();
+        else sendToClient(WRONG_USERNAME);
+    }
     else if(m_messageType=="AUTH_CHALLENGE"){
         std::cout<<"Sto leggendo l'iv e la challenge cifrata..."<<std::endl;
         auto self = shared_from_this();
@@ -97,16 +100,22 @@ void Session::parseAndDecryptCryptoChallenge(){
         printf("%02x",cc_vect[i]);
     printf("\n");
     //fine debug
-    std::vector<unsigned char> key=HKDF("chiave123", iv_vect);
+    std::string password;
+    if (m_server.UserToPassword(m_username,password)==WRONG_USERNAME){
+        sendToClient(WRONG_USERNAME);
+        return;
+    }
+    std::vector<unsigned char> key=HKDF(password, iv_vect);
     std::cout<<"Lunghezza chiave : "<<key.size()<<std::endl;
     std::vector<unsigned char> dec_challenge=decrypt(cc_vect,iv_vect,key);
-    std::string dec_str_challenge;
-    dec_str_challenge.resize(dec_challenge.size());
-    for (int i=0;i<dec_str_challenge.size();i++)
-        dec_str_challenge[i] = (char) dec_challenge[i];
-    if(m_challenge.compare(dec_str_challenge)==0)
-        std::cout<<"AUTENTICAZIONE RIUSCITA"<<std::endl;
-    else std::cout<<"AUTENTICAZIONE FALLITA"<<std::endl;
+    if(CRYPTO_memcmp((unsigned char*)m_challenge.data(),dec_challenge.data(),LENGTHCHALLENGE)==0) {
+        std::cout << "AUTENTICAZIONE RIUSCITA" << std::endl;
+        sendToClient(OK);
+    }
+    else {
+        std::cout<<"AUTENTICAZIONE FALLITA"<<std::endl;
+        sendToClient(WRONG_PASSWORD);
+    }
 
 }
 void Session::genChallenge(){
@@ -123,12 +132,6 @@ void Session::genChallenge(){
         printf("%02x",m_challenge[i]);
     printf("\n");
     auto buf = boost::asio::buffer(m_challenge.data(), LENGTHCHALLENGE);
-    //std::cout<<m_requestBuf_.size()<<std::endl;
-    //m_requestBuf_.consume(m_requestBuf_.size());
-    //std::cout<<m_requestBuf_.size()<<std::endl;
-    //sendToClient(CHALLENGE);
-    std::cout<<"dimensione bufRequest : "<<requestBuf.size()<<std::endl;
-    m_requestBuf_.consume(m_requestBuf_.size());
     auto self=shared_from_this();
     boost::asio::async_write(m_socket,
                              buf,
@@ -240,6 +243,12 @@ void Session::sendToClient(responseType rt){
             break;
         case INTERNAL_ERROR:
             responseStream << "INTERNAL_ERROR"<<"\n\n";
+            break;
+        case WRONG_PASSWORD:
+            responseStream << "WRONG_PASSWORD"<<"\n\n";
+            break;
+        case WRONG_USERNAME:
+            responseStream << "WRONG_USERNAME"<<"\n\n";
             break;
         default:
             std::cout <<"nessun header"<<std::endl;
