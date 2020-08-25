@@ -49,8 +49,8 @@ public:
 
     bool isSynced() {
         std::unique_lock ul (m);
-        for(auto it = map.begin(); it != map.end(); it++) {
-            if (it->second == SyncStatus::NotSynced)
+        for(auto& it : map) {
+            if (it.second == SyncStatus::NotSynced)
                 return false;
         }
         return true;
