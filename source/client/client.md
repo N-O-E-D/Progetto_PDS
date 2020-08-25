@@ -38,6 +38,5 @@ Constructor receive the root path and populates the map with all the sub paths, 
 
 ### TODO
 * autenticazione -> riprovare/fermare il programma in caso di fallimento
-* spostare creazione di PathStatusMap nel main => passaggio come parametro al fsw
 * gestione degli errori
 * sistemazione del codice 

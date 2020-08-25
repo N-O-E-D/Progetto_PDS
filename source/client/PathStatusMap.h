@@ -16,10 +16,14 @@ private:
     std::unordered_map<std::string, SyncStatus> map;
     std::mutex m;
 public:
-    explicit PathStatusMap(const std::string& root_path) {
+//    explicit PathStatusMap(const std::string& root_path) {
+//        for (auto &file : std::filesystem::recursive_directory_iterator(root_path))
+//            this->insert(file.path().string(), SyncStatus::NotSynced);
+//    };
+    void setRoot(const std::string& root_path){
         for (auto &file : std::filesystem::recursive_directory_iterator(root_path))
             this->insert(file.path().string(), SyncStatus::NotSynced);
-    };
+    }
 
     void insert(const std::string& key, SyncStatus value) {
         std::unique_lock ul (m);
