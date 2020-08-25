@@ -11,7 +11,7 @@
 #include "../API_client/ClientSocket.h"
 
 boost::lockfree::spsc_queue< std::pair<std::string,Status> > path_to_process(1024);
-PathStatusMap pathSyncStatus("../test");
+PathStatusMap pathSyncStatus;
 
 void fileSystemWatcher(const std::string& root) {
     // Create a FileWatcher instance that will check the current folder for changes every 5 seconds
@@ -47,7 +47,7 @@ void removeHandler(const std::string& path){
 // program receive parameters as arguments
 // program folder address port [time]
 int main(int argc, char** argv) {
-    // 0. Checking parameters
+    // 0.1 Checking parameters
     if (argc < 4) {
         std::cerr << "Not enough parameters\n";
         return -1;
@@ -55,6 +55,8 @@ int main(int argc, char** argv) {
     auto root = std::string(argv[1]);
     auto address = std::string(argv[2]);
     auto port = std::string(argv[3]);
+    // 0.2 Initialization
+    pathSyncStatus.setRoot(root);
 
     // 1. Start File System Watcher
     std::thread t1{fileSystemWatcher, root};
@@ -70,12 +72,15 @@ int main(int argc, char** argv) {
     std::string username;
     std::string password;
     // 3.1 Ask user to insert credentials
-    std::cout << "Pleas insert username: ";
+    std::cout << "Please insert username: ";
     std::cin >> username;
-    std::cout << "Pleas insert password: ";
+    std::cout << "Please insert password: ";
     std::cin >> password;
     // 3.2 Call authentication method
-    socket.authenticate(username, password);
+    if(socket.authenticate(username, password) != responseType::OK) {
+        std::cerr << "Authentication error" << std::endl;
+        return -2;
+    }
 
     // 4. Consumer process
     std::pair<std::string, Status> path;

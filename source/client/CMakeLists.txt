@@ -6,7 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(client main.cpp ../API_client/ClientSocket.cpp ../API_client/ClientSocket.h FileSystemWatcher.h FileSystemWatcher.cpp PathStatusMap.h)
 
 # OpenSSL Libraries
-#set(OPENSSL_ROOT_DIR /usr/local/Cellar/openssl@1.1/1.1.1g) #for OpenSSL installed with brew on macOS
+if(APPLE)
+    set(OPENSSL_ROOT_DIR /usr/local/Cellar/openssl@1.1/1.1.1g) #for OpenSSL installed with brew on macOS
+endif()
 find_package(OpenSSL REQUIRED)
 if(OpenSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
