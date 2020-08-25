@@ -4,14 +4,6 @@
 
 #include "ClientSocket.h"
 
-/*-------------------------------*/
-#include <stdio.h>
-#include <string>
-#include <iostream>
-#include <unistd.h>
-#include <string>
-#include <array>
-#include <openssl/evp.h>
 
 int main(int argc, char* argv[])
 {

@@ -9,7 +9,9 @@
 enum messageType{
     UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH,AUTH_CHALLENGE
 };
-
+enum responseType{
+    OK,WRONG_USERNAME,WRONG_PASSWORD,CONNECTION_ERROR
+};
 class ClientSocket
 {
 public:
@@ -29,7 +31,7 @@ public:
     void createDir(std::string const& path, const std::function<void (std::string)> &action);
     void syncDir(std::string const& path, const std::function<void (std::string)> &action);
     void syncFile(std::string const& path, const std::function<void (std::string)> &action);
-    void authenticate(std:: string const& username, std::string const& password);
+    responseType authenticate(std:: string const& username, std::string const& password);
 private:
     void openFile(std::string const& t_path);
     void doConnect();
@@ -42,10 +44,13 @@ private:
     void waitResponse(messageType mt,const std::function<void (std::string)> &action);
     void processResponse(size_t t_bytesTransferred,messageType mt,const std::function<void (std::string)> &action);
     void analyzeResponse(std::string response,messageType mt,const std::function<void (std::string)> &action);
-    void waitChallenge();
-    void genCryptoChallenge();
-    void waitCookie();
-    void processResponseCookie();
+    responseType waitChallenge();
+    responseType doConnectSync();
+    template<class Buffer>
+    responseType writeSync(Buffer& t_buffer);
+    responseType genCryptoChallenge();
+    responseType waitResponseSync();
+    responseType processResponseSync();
     TcpResolver m_ioService;
     TcpSocket m_socket;
     TcpResolverIterator m_endpointIterator;

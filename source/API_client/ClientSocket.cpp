@@ -14,30 +14,77 @@ ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpoin
                             m_endpointIterator(t_endpointIterator)
                             {}
 
-void ClientSocket::authenticate(std:: string const& username, std::string const& password){
+responseType ClientSocket::authenticate(std:: string const& username, std::string const& password){
     m_password=password;
     m_username=username;
     m_messageType=AUTH;
     buildHeader(AUTH);
-    doConnect();
+    responseType rt;
+    std::cout<<"Mi connetto con il server..."<<std::endl;
+    rt=doConnectSync();
+    if(rt==CONNECTION_ERROR)
+        return rt;
+    std::cout<<"Connessione accettata."<<std::endl;
+    std::cout<<"Sto inviando l'header..."<<std::endl;
+    rt=writeSync(m_request);
+    if(rt==CONNECTION_ERROR)
+        return rt;
+    std::cout<<"Header inviato."<<std::endl;
     std::cout<<"Aspetto la sfida"<<std::endl;
-    waitChallenge();
-}
+    rt=waitChallenge();
+    if(rt==CONNECTION_ERROR)
+        return rt;
+    std::cout<<"Sfida ricevuta."<<std::endl;
+    std::cout<<"Genero la sfida cifrata e la invio..."<<std::endl;
+    rt=genCryptoChallenge();
+    if(rt==CONNECTION_ERROR)
+        return rt;
+    std::cout<<"Sfida cifrata inviata. "<<std::endl;
+    std::cout<<"In attesa dell'esito dell'autenticazione..."<<std::endl;
+    rt=waitResponseSync();
+    if(rt==CONNECTION_ERROR)
+        return rt;
 
-void ClientSocket::waitChallenge(){
+}
+template<class Buffer>
+responseType ClientSocket::writeSync(Buffer& t_buffer){
+    boost::system::error_code error;
+    boost::asio::write(m_socket,t_buffer,error);
+    if(error) {
+        std::cout << "Connection error during writeSync" << std::endl;
+        return CONNECTION_ERROR;
+    }
+    return OK;
+}
+responseType ClientSocket::doConnectSync() {
+    boost::system::error_code error;
+    boost::asio::connect(m_socket, m_endpointIterator, error);
+    if (error) {
+        std::cout << "Connection error during doConnectSync" << std::endl;
+        return CONNECTION_ERROR;
+    }
+    return OK;
+}
+responseType ClientSocket::waitChallenge(){
     m_buf.resize(LENGTHCHALLENGE);
-    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), LENGTHCHALLENGE),
-                             [this](boost::system::error_code ec, size_t bytes)
+    boost::system::error_code error;
+    m_socket.read_some(boost::asio::buffer(m_buf.data(), LENGTHCHALLENGE),error);
+    if(error) {
+        std::cout << "Connection error during waitChallenge" << std::endl;
+        return CONNECTION_ERROR;
+    }
+    return OK;
+    /*[this](boost::system::error_code ec, size_t bytes)
                              {
                                     if (!ec)
                                         genCryptoChallenge();
                                     else
                                         std::cout<<"errore in waitChallenge : "<<ec.message()<<std::endl;
-                             });
+                             });*/
 
 
 }
-void ClientSocket::genCryptoChallenge(){
+responseType ClientSocket::genCryptoChallenge(){
     std::string message(m_buf.begin(),m_buf.end());
     //debug
     printf("La challenge ricevuta è:\n");
@@ -66,25 +113,36 @@ void ClientSocket::genCryptoChallenge(){
     printf("\n");
     //fine debug
     auto buf = boost::asio::buffer(ss.data(), iv.size()+cipherChallenge.size());
-    writeFileContent(buf);
-    waitResponse(AUTH,[](std::string s) ->void { });
+    responseType rt;
+    return writeSync(buf);
 }
-void ClientSocket::waitCookie(){
-    async_read_until(m_socket, m_response, "\n\n",
-                     [this](boost::system::error_code ec, size_t bytes)
+responseType ClientSocket::waitResponseSync(){
+    boost::system::error_code error;
+    read_until(m_socket, m_response, "\n\n",error);
+                     /*[this,mt,action](boost::system::error_code ec, size_t bytes)
                      {
                          if (!ec)
-                             processResponseCookie();
+                             processResponse(bytes,mt,action);
                          else
-                             std::cout<<"errore in waitCookie: "<<ec.message()<<std::endl;
-                     });
+                             std::cout<<"errore in waitResponse"<<std::endl;
+                     });*/
+    if (error) {
+        std::cout << "Connection error during doConnectSync" << std::endl;
+        return CONNECTION_ERROR;
+    }
+    return OK;
 }
-void ClientSocket::processResponseCookie(){
+responseType ClientSocket::processResponseSync(){
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
-    if(m_responseType=="OK")
-        std::cout<<"autenticato\n";
-    else std::cout<<"non autenticato\n";
+    if(m_responseType=="WRONG_USERNAME") {
+        std::cout << "Username errato!" << std::endl;
+        return WRONG_USERNAME;
+    }
+    if(m_responseType=="WRONG_PASSWORD") {
+        std::cout << "Password errata!" << std::endl;
+        return WRONG_PASSWORD;
+    }
 }
 void ClientSocket::openFile(std::string const& t_path)
 {

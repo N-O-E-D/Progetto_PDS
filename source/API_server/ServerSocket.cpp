@@ -120,17 +120,15 @@ void Session::parseAndDecryptCryptoChallenge(){
 }
 void Session::genChallenge(){
     std::vector<unsigned char> challenge = genRandomBytes(LENGTHCHALLENGE);
-    //debug
-    printf("La challenge generata è: \n");
-
-    //fine debug
-
     m_challenge.resize(challenge.size());
     for (int i=0;i<challenge.size();i++)
         m_challenge[i]=challenge[i];
+    //debug
+    printf("La challenge generata è: \n");
     for (int i=0;i<m_challenge.size();i++)
         printf("%02x",m_challenge[i]);
     printf("\n");
+    //fine debug
     auto buf = boost::asio::buffer(m_challenge.data(), LENGTHCHALLENGE);
     auto self=shared_from_this();
     boost::asio::async_write(m_socket,
