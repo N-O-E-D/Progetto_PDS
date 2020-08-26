@@ -75,6 +75,13 @@ bool autentica(boost::asio::streambuf& recmessage){
 */
 
 void handleSocket(int portnum){
+
+    Server s;
+    s.createDir("prova.giar");
+    s.setUserDirectory("Bruno");
+    s.setUserDirectory("Giandonato");
+    s.setUserDirectory("Lorenzo");
+    /*
     while(true){
     try {
         boost::asio::io_service ioService;
@@ -86,6 +93,8 @@ void handleSocket(int portnum){
         std::cerr << "Exception: " << e.what() << "\n";
     }
     }
+    */
+
     /*
     try
     {
@@ -185,8 +194,13 @@ void handleSocket(int portnum){
 
 int main()
 {
+    //Carica le credenziali in memoria
     const std::string filename("../credenziali.txt");
     loadUsers(filename);
+
+    //Setta la working directory del server
+    boost::filesystem::current_path(workingdirectory);
+
     //launch the pool with num_threads threads
     //Ogni thread gestisce un client (su una porta diversa), tramite una coda di richieste provenienti dallo stesso
     //si possono gestire fino a num_threads clients contemporaneamente

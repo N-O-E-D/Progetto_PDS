@@ -10,6 +10,24 @@
 
 /* ***** FILESYSTEM ***** */
 
+void Server::setUserDirectory(const std::string username){  //se la directory dell'utente non esiste, la crea
+
+    const std::string ud(workingdirectory+username+"/");
+    const boost::filesystem::path p(ud);
+    if(!boost::filesystem::exists(p)){
+        boost::system::error_code ec;
+        boost::filesystem::create_directory(p,ec);  //questa versione di create_directory prende il codice errore, pertanto non c'è bisogno di inserirla in un try/catch
+        if(ec){   //basta verificare la presenza dell'errore o meno
+            std::cerr<<"Create dir error: "<<ec.message()<<std::endl;
+            return;
+        }
+        std::cout<<"User directory non esistente: "<<p<<" creato."<<std::endl;
+        return;
+    }
+    userDirectory = ud;
+    return;
+}
+
 responseType Server::update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
 
     std::cout<<"UPDATE"<<std::endl;
