@@ -17,7 +17,7 @@ ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpoin
                             m_endpointIterator(t_endpointIterator)
                             {}
 /**
- * ClientSocket's method which performs the authentication procedure
+ * ClientSocket's method which performs the authentication procedure (in synchronous or blocking way)
  * @param username
  * @param password
  * @return responseType object
@@ -55,14 +55,14 @@ responseType ClientSocket::authenticate(std:: string const& username, std::strin
 
     log(TRACE,"Sfida cifrata inviata.\nIn attesa dell'esito dell'autenticazione...");
 
-    rt=waitResponseSync();
+    rt=readUntilSync();
     if(rt==CONNECTION_ERROR)
         return rt;
     return processResponseSync();
 
 }
 /**
- * ClientSocket method's which performs synchronous (blocking) writing
+ * ClientSocket's method which performs synchronous (blocking) writing
  * @tparam Buffer
  * @param t_buffer
  * @return responseType object
@@ -78,25 +78,23 @@ responseType ClientSocket::writeSync(Buffer& t_buffer){
     return OK;
 }
 /**
- * ClientSocket method's which performs synchronous (blocking) reading (until)
+ * ClientSocket's method which performs synchronous (blocking) reading (until)
  * @tparam Buffer
  * @param t_buffer
  * @return responseType object
  */
-template<class Buffer>
 responseType ClientSocket::readUntilSync(){
     boost::system::error_code error;
-    responseType rt;
     m_response.consume(m_response.size());
     read_until(m_socket, m_response, "\n\n",error);
     if (error) {
-        std::cout << "Connection error during waitChallenge" << std::endl;
+        log(ERROR,"Connection error during waitChallenge");
         return CONNECTION_ERROR;
     }
     else return OK;
 }
 /**
- * ClientSocket method's which performs synchronous (blocking) connection
+ * ClientSocket's method which performs synchronous (blocking) connection
  * @return responseType object
  */
 responseType ClientSocket::doConnectSync() {
@@ -109,113 +107,103 @@ responseType ClientSocket::doConnectSync() {
     return OK;
 }
 /**
- * ClientSocket method's which performs synchronous (blocking) challenge waiting
+ * ClientSocket's method which performs synchronous (blocking) challenge waiting
  * @return responseType object
  */
 responseType ClientSocket::waitChallenge() {
-    boost::system::error_code error;
     responseType rt;
-    m_response.consume(m_response.size());
-    read_until(m_socket, m_response, "\n\n",error);
-    if (error) {
-        std::cout << "Connection error during waitChallenge" << std::endl;
-        return CONNECTION_ERROR;
-    }
+    rt=readUntilSync();
+    if(rt==CONNECTION_ERROR)
+        return rt;
     rt=processResponseSync();
     if(rt==WRONG_USERNAME) {
-        std::cout<<"Wrong username!"<<std::endl;
+        log(ERROR,"Wrong username!");
         return rt;
     }
     return OK;
 }
+/**
+ * ClientSocket's method which generate the cipher challenge and send it to server
+ * @return responseType
+ */
 responseType ClientSocket::genCryptoChallenge(){
+
     std::string message(m_buf.begin(),m_buf.end());
-    //debug
-    printf("La challenge ricevuta è:\n");
-    for (int i=0;i<message.size();i++)
-        printf("%02x",(unsigned char)message[i]);
-    printf("\n");
-    //fine debug
-    std::vector<unsigned char>iv=genRandomBytes(16);
+    log(TRACE,"La challenge ricevuta è:",message);
+    // iv generation
+    std::vector<unsigned char> iv=genRandomBytes(16);
+    // hkdf generation starting from password inserted by user (it is more secure!)
     std::vector<unsigned char> key= HKDF (m_password,iv);
+    // challenge ciphering
     std::vector<unsigned char> cipherChallenge = encrypt(message,iv,key);
-    m_cryptoChallenge.resize(cipherChallenge.size());
-    m_iv.resize(iv.size());
-    for(int i=0;i<cipherChallenge.size();i++)
-        m_cryptoChallenge[i]=(char) cipherChallenge[i];
-    for(int i=0;i<iv.size();i++)
-        m_iv[i]=(char) iv[i];
+    //vector<unsigned char> translation to string for correct delivery to server
+    m_cryptoChallenge=vectUnsCharToStr(cipherChallenge);
+    m_iv=vectUnsCharToStr(iv);
+
     m_messageType=AUTH_CHALLENGE;
     buildHeader(AUTH_CHALLENGE);
     writeHeader(m_request);
+
     std::vector<unsigned char> ss;
     ss.insert(ss.end(),iv.begin(),iv.end());
     ss.insert(ss.end(),cipherChallenge.begin(),cipherChallenge.end());
-    //debug
-    for (int i=0;i<iv.size()+cipherChallenge.size();i++)
-        printf("%02x",ss[i]);
-    printf("\n");
-    //fine debug
-    auto buf = boost::asio::buffer(ss.data(), iv.size()+cipherChallenge.size());
+    log(TRACE,"invio: ",ss);
+    auto buf = boost::asio::buffer(ss.data(), m_iv.size()+m_cryptoChallenge.size());
     return writeSync(buf);
 }
-responseType ClientSocket::waitResponseSync(){
-    boost::system::error_code error;
-    m_response.consume(m_response.size());
-    read_until(m_socket, m_response, "\n\n",error);
-    if (error) {
-        std::cout << "Connection error during doConnectSync" << std::endl;
-        return CONNECTION_ERROR;
-    }
-    return OK;
-}
+/**
+ * ClientSocket's method which process the server response in synchronous (blocking) way
+ * @return responseType object
+ */
 responseType ClientSocket::processResponseSync(){
-    //debug
-    auto bufs=m_response.data();
-    std::cout<<"dimensione bufRequest : "<<m_response.size()<<std::endl;
-    std::cout<<"HEADER"<<std::endl;
-    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_response.size());
-    std::cout<<"FINE HEADER"<<std::endl;
-    //fine debug
+
+    log(TRACE,"Ho ricevuto questo header:",m_response);
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
-    std::cout<<"Ho letto :"<<m_responseType<<std::endl;
-    if(m_responseType=="OK") {
-        std::cout << "Ok" << std::endl;
-        return OK;
-    }
-    if(m_responseType=="WRONG_USERNAME") {
-        std::cout << "Username errato!" << std::endl;
-        return WRONG_USERNAME;
-    }
-    if(m_responseType=="WRONG_PASSWORD") {
-        std::cout << "Password errata!" << std::endl;
-        return WRONG_PASSWORD;
-    }
-    if(m_responseType=="CHALLENGE"){
-        std::cout<<"Username corretto . Leggo la sfida"<<std::endl;
-        m_buf.clear();
-        m_buf.resize(1);
-        responseStream.read(m_buf.data(),1);
-        m_buf.clear();
-        m_buf.resize(LENGTHCHALLENGE);
-        responseStream.read(m_buf.data(),LENGTHCHALLENGE);
-        return OK;
+    log(TRACE,"Ho letto : "+m_responseType);
+    responseType rt= stringToEnum(m_responseType);
+    switch(rt){
+        case OK:
+            log(TRACE,"OK autenticato");
+            return OK;
+        case WRONG_USERNAME:
+            log(TRACE,"Username errato!");
+            return WRONG_USERNAME;
+        case WRONG_PASSWORD:
+            log(TRACE,"Password errata!");
+            return WRONG_PASSWORD;
+        case CHALLENGE:
+            log(TRACE,"Username corretto. Leggo la sfida...");
+            m_buf.clear();
+            m_buf.resize(1);
+            responseStream.read(m_buf.data(),1);
+            m_buf.clear();
+            m_buf.resize(LENGTHCHALLENGE);
+            responseStream.read(m_buf.data(),LENGTHCHALLENGE);
+            return OK;
+        case UNDEFINED :
+            log(TRACE,"Undefined header!");
+            return CONNECTION_ERROR;
     }
 }
+/**
+ * ClientSocket's method which open a file
+ * @param t_path
+ */
 void ClientSocket::openFile(std::string const& t_path)
 {
     m_sourceFile.open(t_path, std::ios_base::binary);
     if (m_sourceFile.fail())
         throw std::fstream::failure("Failed while opening file " + t_path);
-    else std::cout<<t_path + " aperto"<<std::endl;
+    else log(TRACE,t_path+" aperto");
     m_sourceFile.seekg(0, m_sourceFile.end);
     m_fileSize = m_sourceFile.tellg();
     m_sourceFile.seekg(0, m_sourceFile.beg);
 
 }
-
-
+/**
+ * ClientSocket's method which starts an asynchronous (non-blocking) connection
+ */
 void ClientSocket::doConnect()
 {
     boost::asio::async_connect(m_socket, m_endpointIterator,
@@ -228,15 +216,14 @@ void ClientSocket::doConnect()
                                        if(m_messageType==UPDATE || m_messageType==CREATE_FILE)
                                            doWriteFile(ec);
 
-                                   } else {
-                                       std::cout << "Couldn't connect to host. Please run server "
-                                                    "or check network connection.\n";
-                                       BOOST_LOG_TRIVIAL(error) << "Error: " << ec.message();
-                                   }
+                                   } else log(ERROR,"Couldn't connect to host. Please run server "
+                                                    "or check network connection : "+ec.message());
                                });
 }
-
-
+/**
+ * ClientSocket's method which read a file content and then send the file to server
+ * @param t_ec
+ */
 void ClientSocket::doWriteFile(const boost::system::error_code& t_ec)
 {
     if (!t_ec) {
@@ -244,15 +231,16 @@ void ClientSocket::doWriteFile(const boost::system::error_code& t_ec)
             m_buf.resize(m_fileSize);
             m_sourceFile.read(m_buf.data(), m_fileSize);
             if (m_sourceFile.fail() && !m_sourceFile.eof()) {
-                auto msg = "Failed while reading file";
-                BOOST_LOG_TRIVIAL(error) << msg;
-                throw std::fstream::failure(msg);
+                log(ERROR,"Failed while reading file");
+                throw std::fstream::failure("Failed while reading file");
             }
-            std::stringstream ss;
+            /*std::stringstream ss;
             ss << "Send " << m_sourceFile.gcount() << " bytes, total: "
                << m_sourceFile.tellg() << " bytes";
-            BOOST_LOG_TRIVIAL(trace) << ss.str();
-            std::cout<<m_buf.data()<<std::endl;
+               BOOST_LOG_TRIVIAL(trace) << ss.str();*/
+            log(TRACE,"Send"+std::to_string(m_sourceFile.gcount())+ " bytes, total: "+std::to_string(m_sourceFile.tellg())+" bytes");
+            log(TRACE,"Il contenuto del file inviato è :\n+std::string(m_buf.begin(),m_buf.end())");
+            //std::cout<<m_buf.data()<<std::endl;
             auto buf = boost::asio::buffer(m_buf.data(), static_cast<size_t>(m_sourceFile.gcount()));
             writeFileContent(buf);
         }
@@ -260,6 +248,10 @@ void ClientSocket::doWriteFile(const boost::system::error_code& t_ec)
         BOOST_LOG_TRIVIAL(error) << "Error: " << t_ec.message();
     }
 }
+/**
+ * ClientSocket's method which builds the correct header accord to messageType passed as parameter
+ * @param mt
+ */
 void ClientSocket::buildHeader(messageType mt){
     std::ostream requestStream(&m_request);
     switch (mt) {
@@ -272,9 +264,6 @@ void ClientSocket::buildHeader(messageType mt){
         case REMOVE:
             requestStream << "REMOVE\n" << m_path << "\n" << "\n\n";
             break;
-        /*case REMOVE_DIR:
-            requestStream << "REMOVE_DIR\n" << m_path << "\n" << "\n\n";
-            break;*/
         case CREATE_FILE:
             requestStream << "CREATE_FILE\n" << m_path << "\n" <<std::to_string(m_fileSize)<<"\n\n";
             break;
@@ -297,14 +286,19 @@ void ClientSocket::buildHeader(messageType mt){
             return;
             break;
     }
+    log(TRACE,"L'header costruito è:",m_request);
     //debug
-    auto bufs=m_request.data();
+    /*auto bufs=m_request.data();
     std::cout<<"HEADER"<<std::endl;
     std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_request.size());
     std::cout<<"FINE HEADER"<<std::endl;
-    BOOST_LOG_TRIVIAL(trace) << "Request header size: " << m_request.size();
+    BOOST_LOG_TRIVIAL(trace) << "Request header size: " << m_request.size();*/
     }
-
+/**
+ * ClientSocket's method which performs an update action (send to server the path and then the new content of the file)
+ * @param path
+ * @param action
+ */
 void ClientSocket::update(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=UPDATE;
@@ -313,6 +307,12 @@ void ClientSocket::update(const std::string &path,const std::function<void (std:
     doConnect();
     waitResponse(UPDATE,action);
 }
+/**
+ * ClientSocket's method which performs an update name action (send to server the path and then the new name of the file)
+ * @param path
+ * @param newName
+ * @param action
+ */
 void ClientSocket::updateName(const std::string &path,std::string const& newName,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=UPDATE_NAME;
@@ -321,6 +321,11 @@ void ClientSocket::updateName(const std::string &path,std::string const& newName
     doConnect();
     waitResponse(UPDATE_NAME,action);
 }
+/**
+ * ClientSocket's method which performs a remove action (send to server the path to remove)
+ * @param path
+ * @param action
+ */
 void ClientSocket::remove(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=REMOVE;
@@ -328,13 +333,11 @@ void ClientSocket::remove(const std::string &path,const std::function<void (std:
     doConnect();
     waitResponse(REMOVE,action);
 }
-/*void ClientSocket::removeDir(const std::string &path) {
-    m_path=path;
-    m_messageType=REMOVE_DIR;
-    buildHeader(REMOVE_DIR);
-    doConnect();
-    waitResponse(REMOVE_DIR);
-}*/
+/**
+ * ClientSocket's method which performs a create file action (send to server the path and then the content of the file)
+ * @param path
+ * @param action
+ */
 void ClientSocket::createFile(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=CREATE_FILE;
@@ -343,6 +346,11 @@ void ClientSocket::createFile(const std::string &path,const std::function<void (
     doConnect();
     waitResponse(CREATE_FILE,action);
 }
+/**
+ * ClientSocket's method which performs a create directory action (send to server the path)
+ * @param path
+ * @param action
+ */
 void ClientSocket::createDir(const std::string &path,const std::function<void (std::string)> &action) {
     m_path=path;
     m_messageType=CREATE_DIR;
@@ -350,6 +358,11 @@ void ClientSocket::createDir(const std::string &path,const std::function<void (s
     doConnect();
     waitResponse(CREATE_DIR,action);
 }
+/**
+ * ClientSocket's method which performs a syncronization directory action (send to server the path)
+ * @param path
+ * @param action
+ */
 void ClientSocket::syncDir(std::string const& path,const std::function<void (std::string)> &action){
     m_path=path;
     m_messageType=SYNC_DIR;
@@ -357,6 +370,11 @@ void ClientSocket::syncDir(std::string const& path,const std::function<void (std
     doConnect();
     waitResponse(SYNC_DIR,action);
 }
+/**
+ * ClientSocket's method which performs a syncronization file action (send to server the path and then the hash of the file)
+ * @param path
+ * @param action
+ */
 void ClientSocket::syncFile(std::string const& path,const std::function<void (std::string)> &action){
     m_path=path;
     m_messageType=SYNC_FILE;
@@ -366,18 +384,25 @@ void ClientSocket::syncFile(std::string const& path,const std::function<void (st
     unsigned int md_len=computeHash(path, md_value);
 
     m_mdlen=md_len;
-    printf("digest: ");
+    /*printf("digest: ");
     for(int i = 0; i < md_len; i++)
         printf("%02x", md_value[i]);
-    printf("\n");
+    printf("\n");*/
+    log(TRACE,"The digest is:",std::vector<unsigned char>(md_value,md_value+md_len));
     std::string sName(reinterpret_cast<char* >(md_value),(size_t) md_len);
     m_mdvalue=sName;
-    for(int i = 0; i < md_len; i++)
-        printf("%02x", (unsigned char)sName[i]);
+    /*for(int i = 0; i < md_len; i++)
+        printf("%02x", (unsigned char)sName[i]);*/
+    log(TRACE,"The digest (string) is:",m_mdvalue);
     buildHeader(SYNC_FILE);
     doConnect();
     waitResponse(SYNC_FILE,action);
 }
+/**
+ * ClientSocket's method which sends to server the header in asynchronous way
+ * @tparam Buffer
+ * @param t_buffer
+ */
 template<class Buffer>
 void ClientSocket::writeHeader(Buffer& t_buffer) {
     boost::asio::async_write(m_socket,
@@ -389,7 +414,11 @@ void ClientSocket::writeHeader(Buffer& t_buffer) {
                                  }
                              });
 }
-
+/**
+ * ClientSocket's method which sends to server the content of file in asynchronous way
+ * @tparam Buffer
+ * @param t_buffer
+ */
 template<class Buffer>
 void ClientSocket::writeFileContent(Buffer& t_buffer)
 {
@@ -401,7 +430,11 @@ void ClientSocket::writeFileContent(Buffer& t_buffer)
 
                              });
     };
-
+/**
+ * ClientSocket's method which read the response from server in asynchronous way
+ * @param mt
+ * @param action
+ */
 void ClientSocket::waitResponse (messageType mt,const std::function<void (std::string)> &action){
     async_read_until(m_socket, m_response, "\n\n",
                      [this,mt,action](boost::system::error_code ec, size_t bytes)
@@ -412,13 +445,72 @@ void ClientSocket::waitResponse (messageType mt,const std::function<void (std::s
                              std::cout<<"errore in waitResponse"<<std::endl;
                      });
 }
+/**
+ * ClientSocket's method which process the response from server
+ * @param t_bytesTransferred
+ * @param mt
+ * @param action
+ */
 void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt,const std::function<void (std::string)> &action){
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
     analyzeResponse(m_responseType,mt,action);
 }
+/**
+ * Clientsocket's method which analyses e resposne from server
+ * @param response
+ * @param mt
+ * @param action
+ */
 void ClientSocket::analyzeResponse(std::string response, messageType mt,const std::function<void (std::string)> &action){
-    if (response=="OK") {
+    responseType rt=stringToEnum(response);
+    switch(rt){
+        case OK:
+            log(TRACE,"Server ha risposto con OK , tutto è andato a buon fine");
+            break;
+            case INTERNAL_ERROR: //ritento
+            log(TRACE,"Server ha risposto con internal error. Qualcosa è andato storto , ritento");
+            switch(mt){
+                case UPDATE:
+                    update(m_path,action);
+                    break;
+                case UPDATE_NAME:
+                    updateName(m_path,m_newName,action);
+                    break;
+                case REMOVE:
+                    remove(m_path,action);
+                    break;
+                case CREATE_FILE:
+                    createFile(m_path,action);
+                    break;
+                case CREATE_DIR:
+                    createDir(m_path,action);
+                    break;
+                case SYNC_FILE:
+                    syncFile(m_path,action);
+                    break;
+                case SYNC_DIR:
+                    syncDir(m_path,action);
+                    break;
+            }
+            break;
+        case NOT_PRESENT:
+            log(TRACE,"Server ha risposto con not present");
+            if(mt==SYNC_FILE)
+                createFile(m_path,action);
+            if(mt==SYNC_DIR)
+                createDir(m_path,action);
+            if(mt==UPDATE)
+                createFile(m_path,action);
+            if(mt==UPDATE_NAME)
+                createFile(m_path,action);
+            break;
+        case OLD_VERSION:
+            log(TRACE,"Server ha risposto con old version");
+            update(m_path,action);
+            break;
+    }
+    /*if (response=="OK") {
         std::cout << "Server ha risposto con OK , tutto è andato a buon fine" << std::endl;
         action(m_path);
     }
@@ -434,9 +526,6 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
             case REMOVE:
                 remove(m_path,action);
                 break;
-            /*case REMOVE_DIR:
-                removeDir(m_path);
-                break;*/
             case CREATE_FILE:
                 createFile(m_path,action);
                 break;
@@ -465,11 +554,8 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
     if (response=="OLD_VERSION") {
         std::cout<<"Server ha risposto con old version"<<std::endl;
         update(m_path,action);
-    }
-    if(response=="WRONG_USERNAME")
-        std::cout<<"Username errato!"<<std::endl;
-    if(response=="WRONG_PASSWORD")
-        std::cout<<"Password errata!"<<std::endl;
+    }*/
+
 }
 
 void log(logType lt,std::string const& message){
@@ -483,4 +569,79 @@ void log(logType lt,std::string const& message){
             break;
     }
 #endif
+}
+void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message1;
+            drawVectUnsChar(message2);
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message1;
+            drawVectUnsChar(message2);
+            break;
+    }
+#endif
+}
+void log(logType lt,std::string const& message1,std::string const& message2){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message1;
+            drawStrToUnsChar(message2);
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message1;
+            drawStrToUnsChar(message2);
+            break;
+    }
+#endif
+}
+void log(logType lt,std::string const& message, boost::asio::streambuf const& s){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message;
+            drawHeader(s);
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message;
+            drawHeader(s);
+            break;
+    }
+#endif
+}
+void drawVectUnsChar(std::vector<unsigned char> const& v){
+    for (int i=0;i<v.size();i++)
+        printf("%02x",v[i]);
+    printf("\n");
+}
+void drawStrToUnsChar(std::string const& s){
+    for (int i=0;i<s.size();i++)
+        printf("%02x",(unsigned char)s[i]);
+    printf("\n");
+}
+std::string vectUnsCharToStr(std::vector<unsigned char> const& v){
+    std::string result;
+    result.resize(v.size());
+    for(int i=0;i<v.size();i++)
+        result[i]=(char) v[i];
+    return result;
+}
+void drawHeader(boost::asio::streambuf const& s){
+    auto bufs=s.data();
+    std::cout<<"dimensione header : "<<s.size()<<std::endl;
+    std::cout<<"HEADER"<<std::endl;
+    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+s.size());
+    std::cout<<"FINE HEADER"<<std::endl;
+}
+responseType stringToEnum(std::string const& s){
+    std::unordered_map <std::string,responseType> table={{"OK",OK},{"WRONG_USERNAME",WRONG_USERNAME},{"WRONG_PASSWORD",WRONG_PASSWORD},
+                                                         {"CONNECTION_ERROR",CONNECTION_ERROR},{"UNDEFINED",UNDEFINED},{"CHALLENGE",CHALLENGE},
+                                                         {"INTERNAL_ERROR",INTERNAL_ERROR},{"NOT_PRESENT",NOT_PRESENT},{"OLD_VERSION" , OLD_VERSION}};
+    auto it=table.find(s);
+    if(it != table.end())
+        return it->second;
+    else return UNDEFINED;
 }

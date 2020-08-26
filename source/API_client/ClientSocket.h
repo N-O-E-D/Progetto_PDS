@@ -2,15 +2,15 @@
 
 #include <vector>
 #include <fstream>
-
+#include <map>
 #include <boost/asio.hpp>
 #include "../../CryptoFunctions/CryptoExecutor.h"
 
 enum messageType{
-    UPDATE,UPDATE_NAME,REMOVE,/*REMOVE_DIR,*/CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH,AUTH_CHALLENGE
+    UPDATE,UPDATE_NAME,REMOVE,CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH,AUTH_CHALLENGE
 };
 enum responseType{
-    OK,WRONG_USERNAME,WRONG_PASSWORD,CONNECTION_ERROR
+    OK,WRONG_USERNAME,WRONG_PASSWORD,CONNECTION_ERROR,UNDEFINED,CHALLENGE,INTERNAL_ERROR,NOT_PRESENT,OLD_VERSION
 };
 
 class ClientSocket
@@ -46,10 +46,8 @@ private:
     responseType doConnectSync();
     template<class Buffer>
     responseType writeSync(Buffer& t_buffer);
-    template<class Buffer>
     responseType readUntilSync();
     responseType genCryptoChallenge();
-    responseType waitResponseSync();
     responseType processResponseSync();
     TcpResolver m_ioService;
     TcpSocket m_socket;
@@ -77,3 +75,11 @@ enum logType{
     ERROR,TRACE
 };
 void log(logType lt,std::string const& message);
+void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2);
+void log(logType lt,std::string const& message1,std::string const& message2);
+void log(logType lt,std::string const& message,boost::asio::streambuf const& s);
+void drawVectUnsChar(std::vector<unsigned char> const& v);
+void drawStrToUnsChar(std::string const& s);
+void drawHeader(boost::asio::streambuf const& s);
+std::string vectUnsCharToStr(std::vector<unsigned char> const& v);
+responseType stringToEnum(std::string const& s);
