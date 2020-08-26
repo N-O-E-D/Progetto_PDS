@@ -78,7 +78,9 @@ void handleSocket(int portnum){
 
     Server s;
     s.createDir("prova.giar");
-    s.setUserDirectory("bruno");
+    s.setUserDirectory("Bruno");
+    s.setUserDirectory("Giandonato");
+    s.setUserDirectory("Lorenzo");
     /*
     while(true){
     try {
