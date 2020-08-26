@@ -1,75 +1,121 @@
 #include <string>
 #include <iostream>
-
 #include <boost/filesystem/path.hpp>
 #include <boost/log/trivial.hpp>
-
 #include "ClientSocket.h"
-#include "../../CryptoFunctions/CryptoExecutor.h"
-
+//la lunghezza della challenge è definita ed è pari a LENGTHCHALLENGE
 #define LENGTHCHALLENGE 100
+#define DEBUG 1
+/**
+ * ClientSocket constructor
+ * @param t_ioService
+ * @param t_endpointIterator
+ */
 ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator):
                             m_ioService(t_ioService),
                             m_socket(t_ioService),
                             m_endpointIterator(t_endpointIterator)
                             {}
-
+/**
+ * ClientSocket's method which performs the authentication procedure
+ * @param username
+ * @param password
+ * @return responseType object
+ */
 responseType ClientSocket::authenticate(std:: string const& username, std::string const& password){
     m_password=password;
     m_username=username;
     m_messageType=AUTH;
     buildHeader(AUTH);
     responseType rt;
-    std::cout<<"Mi connetto con il server..."<<std::endl;
+
+    log(TRACE,"Start connection with server...");
+
     rt=doConnectSync();
     if(rt==CONNECTION_ERROR)
         return rt;
-    std::cout<<"Connessione accettata."<<std::endl;
-    std::cout<<"Sto inviando l'header..."<<std::endl;
+
+    log(TRACE,"Connessione accettata.\nSto inviando l'header");
+
     rt=writeSync(m_request);
     if(rt==CONNECTION_ERROR)
         return rt;
-    std::cout<<"Header inviato."<<std::endl;
-    std::cout<<"Aspetto la sfida"<<std::endl;
+
+    log(TRACE,"Header inviato.\nAspetto la sfida");
+
     rt=waitChallenge();
     if(rt==CONNECTION_ERROR || rt==WRONG_USERNAME)
         return rt;
-    std::cout<<"Sfida ricevuta."<<std::endl;
-    std::cout<<"Genero la sfida cifrata e la invio..."<<std::endl;
+
+    log(TRACE,"Sfida ricevuta.\nGenero la sfida cifrata e la invio...");
+
     rt=genCryptoChallenge();
     if(rt==CONNECTION_ERROR)
         return rt;
-    std::cout<<"Sfida cifrata inviata. "<<std::endl;
-    std::cout<<"In attesa dell'esito dell'autenticazione..."<<std::endl;
+
+    log(TRACE,"Sfida cifrata inviata.\nIn attesa dell'esito dell'autenticazione...");
+
     rt=waitResponseSync();
     if(rt==CONNECTION_ERROR)
         return rt;
     return processResponseSync();
 
 }
+/**
+ * ClientSocket method's which performs synchronous (blocking) writing
+ * @tparam Buffer
+ * @param t_buffer
+ * @return responseType object
+ */
 template<class Buffer>
 responseType ClientSocket::writeSync(Buffer& t_buffer){
     boost::system::error_code error;
     boost::asio::write(m_socket,t_buffer,error);
     if(error) {
-        std::cout << "Connection error during writeSync" << std::endl;
+        log(ERROR,"Connection error during writeSync");
         return CONNECTION_ERROR;
     }
     return OK;
 }
+/**
+ * ClientSocket method's which performs synchronous (blocking) reading (until)
+ * @tparam Buffer
+ * @param t_buffer
+ * @return responseType object
+ */
+template<class Buffer>
+responseType ClientSocket::readUntilSync(){
+    boost::system::error_code error;
+    responseType rt;
+    m_response.consume(m_response.size());
+    read_until(m_socket, m_response, "\n\n",error);
+    if (error) {
+        std::cout << "Connection error during waitChallenge" << std::endl;
+        return CONNECTION_ERROR;
+    }
+    else return OK;
+}
+/**
+ * ClientSocket method's which performs synchronous (blocking) connection
+ * @return responseType object
+ */
 responseType ClientSocket::doConnectSync() {
     boost::system::error_code error;
     boost::asio::connect(m_socket, m_endpointIterator, error);
     if (error) {
-        std::cout << "Connection error during doConnectSync" << std::endl;
+        log(ERROR,"Connection error during doConnectSync");
         return CONNECTION_ERROR;
     }
     return OK;
 }
+/**
+ * ClientSocket method's which performs synchronous (blocking) challenge waiting
+ * @return responseType object
+ */
 responseType ClientSocket::waitChallenge() {
-    m_buf.resize(LENGTHCHALLENGE);
     boost::system::error_code error;
     responseType rt;
+    m_response.consume(m_response.size());
     read_until(m_socket, m_response, "\n\n",error);
     if (error) {
         std::cout << "Connection error during waitChallenge" << std::endl;
@@ -80,11 +126,6 @@ responseType ClientSocket::waitChallenge() {
         std::cout<<"Wrong username!"<<std::endl;
         return rt;
     }
-    m_socket.read_some(boost::asio::buffer(m_buf.data(), LENGTHCHALLENGE), error);
-    if (error) {
-        std::cout << "Connection error during waitChallenge" << std::endl;
-        return CONNECTION_ERROR;
-    }
     return OK;
 }
 responseType ClientSocket::genCryptoChallenge(){
@@ -92,7 +133,7 @@ responseType ClientSocket::genCryptoChallenge(){
     //debug
     printf("La challenge ricevuta è:\n");
     for (int i=0;i<message.size();i++)
-        printf("%02x",message[i]);
+        printf("%02x",(unsigned char)message[i]);
     printf("\n");
     //fine debug
     std::vector<unsigned char>iv=genRandomBytes(16);
@@ -116,11 +157,11 @@ responseType ClientSocket::genCryptoChallenge(){
     printf("\n");
     //fine debug
     auto buf = boost::asio::buffer(ss.data(), iv.size()+cipherChallenge.size());
-    responseType rt;
     return writeSync(buf);
 }
 responseType ClientSocket::waitResponseSync(){
     boost::system::error_code error;
+    m_response.consume(m_response.size());
     read_until(m_socket, m_response, "\n\n",error);
     if (error) {
         std::cout << "Connection error during doConnectSync" << std::endl;
@@ -129,8 +170,16 @@ responseType ClientSocket::waitResponseSync(){
     return OK;
 }
 responseType ClientSocket::processResponseSync(){
+    //debug
+    auto bufs=m_response.data();
+    std::cout<<"dimensione bufRequest : "<<m_response.size()<<std::endl;
+    std::cout<<"HEADER"<<std::endl;
+    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_response.size());
+    std::cout<<"FINE HEADER"<<std::endl;
+    //fine debug
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
+    std::cout<<"Ho letto :"<<m_responseType<<std::endl;
     if(m_responseType=="OK") {
         std::cout << "Ok" << std::endl;
         return OK;
@@ -142,6 +191,16 @@ responseType ClientSocket::processResponseSync(){
     if(m_responseType=="WRONG_PASSWORD") {
         std::cout << "Password errata!" << std::endl;
         return WRONG_PASSWORD;
+    }
+    if(m_responseType=="CHALLENGE"){
+        std::cout<<"Username corretto . Leggo la sfida"<<std::endl;
+        m_buf.clear();
+        m_buf.resize(1);
+        responseStream.read(m_buf.data(),1);
+        m_buf.clear();
+        m_buf.resize(LENGTHCHALLENGE);
+        responseStream.read(m_buf.data(),LENGTHCHALLENGE);
+        return OK;
     }
 }
 void ClientSocket::openFile(std::string const& t_path)
@@ -411,4 +470,17 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
         std::cout<<"Username errato!"<<std::endl;
     if(response=="WRONG_PASSWORD")
         std::cout<<"Password errata!"<<std::endl;
+}
+
+void log(logType lt,std::string const& message){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message;
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message;
+            break;
+    }
+#endif
 }

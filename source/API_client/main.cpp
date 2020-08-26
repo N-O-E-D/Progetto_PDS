@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
         //unsigned char md_value[EVP_MAX_MD_SIZE];
         //unsigned int md_len=computeHash(filePath,md_value);
         //client.createFile(filePath);
-        client.authenticate("LorenzoCeccarelli","chiave12");
+        client.authenticate("Lorenzo","passwd1");
         ioService.run();
 
     } catch (std::fstream::failure& e) {

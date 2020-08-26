@@ -12,6 +12,7 @@ enum messageType{
 enum responseType{
     OK,WRONG_USERNAME,WRONG_PASSWORD,CONNECTION_ERROR
 };
+
 class ClientSocket
 {
 public:
@@ -21,12 +22,9 @@ public:
     using TcpSocket = boost::asio::ip::tcp::socket;
 
     ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator);
-
-
     void update(std::string const& path, const std::function<void (std::string)> &action);
     void updateName(std::string const& path, std::string const& newName,const std::function<void (std::string)> &action);
     void remove(std::string const& path, const std::function<void (std::string)> &action);
-    //void removeDir(std::string const& path);
     void createFile(std::string const& path, const std::function<void (std::string)> &action);
     void createDir(std::string const& path, const std::function<void (std::string)> &action);
     void syncDir(std::string const& path, const std::function<void (std::string)> &action);
@@ -48,6 +46,8 @@ private:
     responseType doConnectSync();
     template<class Buffer>
     responseType writeSync(Buffer& t_buffer);
+    template<class Buffer>
+    responseType readUntilSync();
     responseType genCryptoChallenge();
     responseType waitResponseSync();
     responseType processResponseSync();
@@ -73,3 +73,7 @@ private:
 
 };
 
+enum logType{
+    ERROR,TRACE
+};
+void log(logType lt,std::string const& message);

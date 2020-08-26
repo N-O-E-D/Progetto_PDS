@@ -18,9 +18,11 @@ Session::Session(TcpSocket t_socket,Server server)
 void Session::doRead()
 {
     auto self = shared_from_this();
+    m_requestBuf_.consume(m_requestBuf_.size());
     async_read_until(m_socket, m_requestBuf_, "\n\n",
                      [this, self](boost::system::error_code ec, size_t bytes)
                      {
+
                          if (!ec)
                              processRead(bytes);
                          else
@@ -43,7 +45,7 @@ void Session::processRead(size_t t_bytesTransferred)
     //fine debug
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
-
+    //m_requestBuf_.consume(m_requestBuf_.size());
     if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
         std::cout<<"Sto leggendo il contenuto del file..."<<std::endl;
         auto self = shared_from_this();
@@ -57,7 +59,7 @@ void Session::processRead(size_t t_bytesTransferred)
     }
     else if(m_messageType=="AUTH") {
         if(m_server.checkCredenziali(m_username)==OK) {
-            sendToClient(OK);
+            //sendToClient(OK);
             genChallenge();
         }
         else sendToClient(WRONG_USERNAME);
@@ -124,32 +126,39 @@ void Session::genChallenge(){
     std::vector<unsigned char> challenge = genRandomBytes(LENGTHCHALLENGE);
     m_challenge.resize(challenge.size());
     for (int i=0;i<challenge.size();i++)
-        m_challenge[i]=challenge[i];
+        m_challenge[i]=(char)challenge[i];
     //debug
     printf("La challenge generata è: \n");
     for (int i=0;i<m_challenge.size();i++)
-        printf("%02x",m_challenge[i]);
+        printf("%02x",(unsigned char)m_challenge[i]);
     printf("\n");
+    std::cout<<challenge.size()<<std::endl;
     //fine debug
-    auto buf = boost::asio::buffer(m_challenge.data(), LENGTHCHALLENGE);
-    auto self=shared_from_this();
-    boost::asio::async_write(m_socket,
+    sendToClient(CHALLENGE);
+    doRead();
+    //auto self=shared_from_this();
+    //auto buf = boost::asio::buffer(challenge.data(), LENGTHCHALLENGE);
+    //printf("eeee\n");
+    /*boost::asio::async_write(m_socket,
                              buf,
-                             [this,self](boost::system::error_code ec, size_t bytes)
+                             [this](boost::system::error_code ec, size_t bytes)
                              {
-                                 std::cout<<"challenge inviata, aspetto la challenge cifrata..."<<std::endl;
-                                 async_read_until(m_socket,m_requestBuf_, "\n\n",
-                                                  [this,self](boost::system::error_code ec, size_t bytes)
-                                                  {
-                                                      if (!ec) {
-                                                          std::cout<<"ho ricevuto la sfida cifrata, ora elaboro..."<<std::endl;
-                                                          processRead(bytes);
-                                                      }
-                                                      else
-                                                          //handleError(__FUNCTION__, ec);
-                                                          std::cout<<"Errore nella ricezione della sfida cifrata : "<<ec.message()<<std::endl;
-                                                  });
-                             });
+                                std::cout<<"challenge inviata, aspetto la challenge cifrata..."<<std::endl;
+                                if(!ec){
+                                    m_requestBuf_.consume(m_requestBuf_.size());
+                                    async_read_until(m_socket, m_requestBuf_, "\n\n",
+                                                     [this](boost::system::error_code ec, size_t bytes)
+                                                     {
+
+                                                         if (!ec)
+                                                             processRead(bytes);
+                                                         else
+                                                             handleError(__FUNCTION__, ec);
+                                                     });
+                                }
+
+
+                             });*/
 }
 
 void Session::readData(std::istream &stream)
@@ -250,32 +259,27 @@ void Session::sendToClient(responseType rt){
         case WRONG_USERNAME:
             responseStream << "WRONG_USERNAME"<<"\n\n";
             break;
+        case CHALLENGE:
+            responseStream << "CHALLENGE\n"<<m_challenge<<"\n\n";
+            break;
         default:
             std::cout <<"nessun header"<<std::endl;
             return;
 
     }
+    //debug
     auto bufs=m_response.data();
     std::cout<<"HEADER"<<std::endl;
     std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_response.size());
     std::cout<<"FINE HEADER"<<std::endl;
+    //fine debug
     boost::asio::async_write(m_socket,
                               m_response,
                              [this,rt](boost::system::error_code ec, size_t )
                              {
                                  std::cout<<"messaggio di risposta inviato "<<std::endl;
-                                 /*if(rt==CHALLENGE) {
-                                     std::cout<<"aspetto la sfida cifrata"<<std::endl;
-                                     async_read_until(m_socket, m_requestBuf_, "\n\n",
-                                                      [this](boost::system::error_code ec, size_t bytes)
-                                                      {
-                                                          if (!ec)
-                                                              processRead(bytes);
-                                                          else
-                                                              handleError(__FUNCTION__, ec);
-                                                      })
-                                 }*/
-                                 //doAccept();
+
+
                              });
 
 }
