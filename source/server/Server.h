@@ -27,13 +27,13 @@ enum responseType{
 responseType loadUsers(const std::string& filename);
 
 //Affinchè vada bene per tutti, metto un path relativo. Nella versione definitiva dovrebbe essere assoluto, per la singola macchina.
-static std::string workingdirectory("../backup/");
+static std::string workingdirectory("../backup");
 
 class Server {
 
 public:
 
-    std::string userDirectory;
+    boost::filesystem::path userDirectory;
 
     void setUserDirectory(const std::string username);
     responseType update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize);

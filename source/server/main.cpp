@@ -77,10 +77,12 @@ bool autentica(boost::asio::streambuf& recmessage){
 void handleSocket(int portnum){
 
     Server s;
-    s.createDir("prova.giar");
     s.setUserDirectory("Bruno");
-    s.setUserDirectory("Giandonato");
-    s.setUserDirectory("Lorenzo");
+    s.updateName("/home/roba.txt","/home/roba2.txt");
+    s.remove("/home/sotto/qlc.dar");
+    s.removeDir("/acaso/cart");
+    s.createDir("/home/nuova");
+    s.syncDir("/home/nuova");
     /*
     while(true){
     try {
