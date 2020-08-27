@@ -77,13 +77,13 @@ bool autentica(boost::asio::streambuf& recmessage){
 void handleSocket(int portnum){
 
     Server s;
-    s.setUserDirectory("Bruno");
-    s.updateName("/home/roba.txt","/home/roba2.txt");
-    s.remove("/home/sotto/qlc.dar");
-    s.removeDir("/acaso/cart");
-    s.createDir("/home/nuova");
-    s.syncDir("/home/nuova");
-    /*
+    //s.setUserDirectory("Bruno");
+    //s.updateName("/home/roba.txt","/home/roba2.txt");
+    //s.remove("/home/sotto/qlc.dar");
+    //s.removeDir("/acaso/cart");
+    //s.createDir("/home/nuova");
+    //s.syncDir("/home/nuova");
+
     while(true){
     try {
         boost::asio::io_service ioService;
@@ -95,7 +95,7 @@ void handleSocket(int portnum){
         std::cerr << "Exception: " << e.what() << "\n";
     }
     }
-    */
+
 
     /*
     try

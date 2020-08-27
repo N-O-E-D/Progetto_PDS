@@ -156,7 +156,6 @@ responseType ClientSocket::genCryptoChallenge(){
  * @return responseType object
  */
 responseType ClientSocket::processResponseSync(){
-
     log(TRACE,"Ho ricevuto questo header:",m_response);
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
@@ -206,11 +205,13 @@ void ClientSocket::openFile(std::string const& t_path)
  */
 void ClientSocket::doConnect()
 {
+    log(TRACE,"Start connection with server...");
     boost::asio::async_connect(m_socket, m_endpointIterator,
                                [this](boost::system::error_code ec, TcpResolverIterator)
                                {
                                    if (!ec) {
                                        //invio l'header
+                                       log(TRACE,"Connesso. Invio header");
                                        writeHeader(m_request);
                                        //controllo anche se devo inviare il contenuto di un file
                                        if(m_messageType==UPDATE || m_messageType==CREATE_FILE)
@@ -219,6 +220,16 @@ void ClientSocket::doConnect()
                                    } else log(ERROR,"Couldn't connect to host. Please run server "
                                                     "or check network connection : "+ec.message());
                                });
+    /*boost::system::error_code ec;
+    log(TRACE,"prima");
+    boost::asio::connect(m_socket,m_endpointIterator,ec);
+    if(ec) {
+        log(ERROR, "Errore connessione :"+ec.message());
+        return;
+    }
+    log(TRACE,"dopo");*/
+
+
 }
 /**
  * ClientSocket's method which read a file content and then send the file to server
@@ -239,9 +250,10 @@ void ClientSocket::doWriteFile(const boost::system::error_code& t_ec)
                << m_sourceFile.tellg() << " bytes";
                BOOST_LOG_TRIVIAL(trace) << ss.str();*/
             log(TRACE,"Send"+std::to_string(m_sourceFile.gcount())+ " bytes, total: "+std::to_string(m_sourceFile.tellg())+" bytes");
-            log(TRACE,"Il contenuto del file inviato è :\n+std::string(m_buf.begin(),m_buf.end())");
+            log(TRACE,"Il contenuto del file inviato è :",std::string(m_buf.begin(),m_buf.end()));
             //std::cout<<m_buf.data()<<std::endl;
             auto buf = boost::asio::buffer(m_buf.data(), static_cast<size_t>(m_sourceFile.gcount()));
+            m_sourceFile.close();
             writeFileContent(buf);
         }
     } else {
@@ -436,6 +448,7 @@ void ClientSocket::writeFileContent(Buffer& t_buffer)
  * @param action
  */
 void ClientSocket::waitResponse (messageType mt,const std::function<void (std::string)> &action){
+    m_response.consume(m_response.size());
     async_read_until(m_socket, m_response, "\n\n",
                      [this,mt,action](boost::system::error_code ec, size_t bytes)
                      {
@@ -463,6 +476,7 @@ void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt,con
  * @param action
  */
 void ClientSocket::analyzeResponse(std::string response, messageType mt,const std::function<void (std::string)> &action){
+    log(TRACE,response);
     responseType rt=stringToEnum(response);
     switch(rt){
         case OK:

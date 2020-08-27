@@ -60,13 +60,12 @@ int main(int argc, char** argv) {
 
     // 1. Start File System Watcher
     std::thread t1{fileSystemWatcher, root};
-
     // 2. Open socket (MODIFIED BY LORENZO)
     boost::asio::io_service ioService;
     boost::asio::ip::tcp::resolver resolver(ioService);
     auto endpointIterator = resolver.resolve({address, port});
     ClientSocket socket(ioService, endpointIterator);
-    ioService.run();
+    //ioService.run();
 
     // 3. Authentication
     std::string username;
@@ -81,13 +80,13 @@ int main(int argc, char** argv) {
         std::cerr << "Authentication error" << std::endl;
         return -2;
     }
-
     // 4. Consumer process
     std::pair<std::string, Status> path;
-    while(true){
+    //while(true){
+        //ioService.run();
         // 4.1 Synchronization
         if(!pathSyncStatus.isSynced())
-            pathSyncStatus.iterate_map([&socket] (const std::pair<std::string,SyncStatus>& path) -> void {
+            pathSyncStatus.iterate_map([&socket,&ioService] (const std::pair<std::string,SyncStatus>& path) -> void {
                 // 4.1.1 If already synced return
                 if( path.second == SyncStatus::Synced ) return;
                 // 4.1.2 If not synced, do it
@@ -95,15 +94,19 @@ int main(int argc, char** argv) {
                     socket.syncDir(path.first, syncHandler);
                 else
                     socket.syncFile(path.first, syncHandler);
+                ioService.run();
+                ioService.restart();
             });
         if(path_to_process.pop(path)){
             // 4.2 Send the corresponding message
             try{
+                //ioService.stop();
                 switch(path.second) {
                     case Status::FileCreated:
                         std::cout << "File created: " << path.first << '\n';
                         // Update server
                         socket.createFile(path.first, syncHandler);
+
                         break;
                     case Status::FileModified:
                         std::cout << "File modified: " << path.first << '\n';
@@ -119,15 +122,21 @@ int main(int argc, char** argv) {
                         std::cout << "Directory created: " << path.first << '\n';
                         // Update server
                         socket.createDir(path.first, syncHandler);
+                        //ioService.run();
+
                         break;
                     default:
                         std::cout << "Error! Unknown file status.\n";
                 }
+                ioService.run();
+                ioService.restart();
+                //log(TRACE,"fuori");
             } catch (std::exception& e){
                 std::cout << e.what() << std::endl;
             }
         }
-    }
+
+    //}
     t1.join();
     return 0;
 }

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(client)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS -pthread)
 
 add_executable(client main.cpp ../API_client/ClientSocket.cpp ../API_client/ClientSocket.h FileSystemWatcher.h FileSystemWatcher.cpp PathStatusMap.h ../../CryptoFunctions/CryptoExecutor.cpp ../../CryptoFunctions/CryptoExecutor.h)
 
@@ -23,15 +24,10 @@ endif()
 
 # Boost Libraries
 find_package(Boost COMPONENTS log log_setup thread filesystem system REQUIRED)
+set (CMAKE_CXX_FLAGS "-g -Wall -DBOOST_LOG_DYN_LINK") #per linux Lorenzo
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
-    target_link_libraries(client
-            ${Boost_LOG_SETUP_LIBRARY}
-            ${Boost_LOG_LIBRARY}
-            ${Boost_FILESYSTEM_LIBRARY}
-            ${Boost_THREAD_LIBRARY}
-            ${Boost_SYSTEM_LIBRARY}
-            )
+    target_link_libraries(client ${Boost_LIBRARIES})
 else()
     message(FATAL_ERROR "Could not find Boost")
 endif()

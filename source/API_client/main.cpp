@@ -25,8 +25,9 @@ int main(int argc, char* argv[])
         ClientSocket client(ioService, endpointIterator);
         //unsigned char md_value[EVP_MAX_MD_SIZE];
         //unsigned int md_len=computeHash(filePath,md_value);
-        //client.createFile(filePath);
-        client.authenticate("Lorenzo","passwd1");
+        //std::string ss;
+        client.createDir(filePath,nullptr);
+        //client.authenticate("Lorenzo","passwd1");
         ioService.run();
 
     } catch (std::fstream::failure& e) {

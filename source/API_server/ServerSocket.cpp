@@ -292,6 +292,7 @@ void Session::manageMessage(std::string const& messageType){
     //std::cout<<"Invio al server "<<messageType<<std::endl;
     log(TRACE,"Richiamo metodi del server ("+messageType+")...");
     responseType rt;
+    m_server.setUserDirectory("Bruno");
     //ora che ho tutti i dati ricevuti dal client richiamo le funzioni fornite dalla classe Server a seconda dell'azione
     if (m_messageType=="UPDATE")
         rt=m_server.update(m_pathName,m_file,m_fileSize);

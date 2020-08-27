@@ -32,7 +32,7 @@ responseType Server::update(std::string const& path, const std::vector<char>& re
     std::cout<<"UPDATE"<<std::endl;
 
     const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    //std::cout<<userPath<<std::endl;
+    std::cout<<path<<std::endl;
 
     if(!boost::filesystem::exists(userPath)){
         std::cout<<"Il path "<<userPath<<" non esiste!"<<std::endl;
@@ -55,9 +55,13 @@ responseType Server::update(std::string const& path, const std::vector<char>& re
         std::cout<<"Write tmp file success!"<<std::endl;
         recfile.close();
         //in caso di successo rimuovi il file vecchio e rinomina il file temporaneo
-        if(remove(userPath.string())==OK){
-            updateName(tmpname,userPath.string());
-            return OK;
+        boost::system::error_code ec;
+        boost::filesystem::remove(userPath,ec);
+        if(!ec){
+            //updateName(tmpname,userPath.string());
+            rename(boost::filesystem::path(tmpname), userPath, ec);
+            if(!ec)
+                return OK;
         }
         std::cout<<"Error removing tmp file"<<std::endl;
         return INTERNAL_ERROR;
@@ -209,13 +213,13 @@ responseType Server::syncFile(std::string const& path, unsigned char* md_value, 
     std::cout << "SYNCFILE" << std::endl;
 
     const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    //std::cout<<userPath<<std::endl;
+    std::cout<<userPath<<std::endl;
 
     //hash di <path>
-    unsigned char md_value_path[EVP_MAX_MD_SIZE];
-    unsigned int md_len_path = computeHash(userPath.string(), md_value_path);
 
     if (boost::filesystem::exists(userPath)) {
+        unsigned char md_value_path[EVP_MAX_MD_SIZE];
+        unsigned int md_len_path = computeHash(userPath.string(), md_value_path);
         if (compareHash(md_value, md_value_path, md_len)) {
             std::cout << "Hash uguali" << std::endl;
             return OK;
