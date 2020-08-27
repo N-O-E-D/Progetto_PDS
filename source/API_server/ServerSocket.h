@@ -7,6 +7,9 @@
 #include <memory>
 #include <boost/asio.hpp>
 #include "../server/Server.h"
+enum functionType{
+    READ_FILE,DECRYPT_CRYPTO_CHALLENGE
+};
 class Session
         : public std::enable_shared_from_this<Session>
 {
@@ -17,11 +20,12 @@ public:
 
     void start()
     {
-        doRead();
+        readAsyncUntil();
     }
 
 private:
-    void doRead();
+    void readAsyncUntil();
+    void readAsyncSome(int dim,functionType ft);
     void processRead(size_t t_bytesTransferred);
     void createFile();
     void readData(std::istream &stream);
@@ -49,6 +53,7 @@ private:
     std::string m_mdvalue;
     std::vector<char> m_file;
     Server m_server;
+
 };
 
 
@@ -68,3 +73,13 @@ private:
     Server m_server;
 
 };
+enum logType{
+    ERROR,TRACE
+};
+void log(logType lt,std::string const& message);
+void log(logType lt,std::string const& message,boost::asio::streambuf const& s);
+void log(logType lt,std::string const& message1,std::string const& message2);
+void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2);
+void drawHeader(boost::asio::streambuf const& s);
+void drawStrToUnsChar(std::string const& s);
+void drawVectUnsChar(std::vector<unsigned char> const& v);
