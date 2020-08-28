@@ -33,11 +33,12 @@ public:
 private:
     void openFile(std::string const& t_path);
     void doConnect();
-    void doWriteFile(const boost::system::error_code& t_ec);
+    void doReadFile();
     template<class Buffer>
     void writeHeader(Buffer& t_buffer);
     template<class Buffer>
     void writeFileContent(Buffer& t_buffer);
+    int computeDimChunk();
     void buildHeader(messageType mt);
     void waitResponse(messageType mt,const std::function<void (std::string)> &action);
     void processResponse(size_t t_bytesTransferred,messageType mt,const std::function<void (std::string)> &action);
@@ -60,6 +61,8 @@ private:
     std::string m_path;
     std::string m_newName;
     std::string m_mdvalue;
+    int m_chunks;
+    int m_sendChunks;
     std::string m_iv;
     unsigned int m_mdlen;
     messageType m_messageType;

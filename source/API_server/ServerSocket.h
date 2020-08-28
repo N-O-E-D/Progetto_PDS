@@ -36,6 +36,7 @@ private:
     void genChallenge();
     void waitCryptoChallenge();
     void parseAndDecryptCryptoChallenge();
+    int computeDimChunk();
     TcpSocket m_socket;
     std::vector<char> m_buf;
     boost::asio::streambuf m_requestBuf_;
@@ -51,6 +52,8 @@ private:
     std::string m_cryptoChallenge;
     std::string m_iv;
     std::string m_mdvalue;
+    int m_chunks;
+    int m_receivedChunks;
     std::vector<char> m_file;
     Server m_server;
 

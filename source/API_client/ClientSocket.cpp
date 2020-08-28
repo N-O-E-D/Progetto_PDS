@@ -5,6 +5,7 @@
 #include "ClientSocket.h"
 //la lunghezza della challenge è definita ed è pari a LENGTHCHALLENGE
 #define LENGTHCHALLENGE 100
+#define DIM_CHUNK 32000
 #define DEBUG 1
 /**
  * ClientSocket constructor
@@ -198,6 +199,9 @@ void ClientSocket::openFile(std::string const& t_path)
     m_sourceFile.seekg(0, m_sourceFile.end);
     m_fileSize = m_sourceFile.tellg();
     m_sourceFile.seekg(0, m_sourceFile.beg);
+    m_chunks = m_fileSize/DIM_CHUNK + 1;
+    m_sendChunks=0;
+    log(TRACE,"Il numero di chuncks è : "+std::to_string(m_chunks));
 
 }
 /**
@@ -215,50 +219,44 @@ void ClientSocket::doConnect()
                                        writeHeader(m_request);
                                        //controllo anche se devo inviare il contenuto di un file
                                        if(m_messageType==UPDATE || m_messageType==CREATE_FILE)
-                                           doWriteFile(ec);
+                                           doReadFile();
 
                                    } else log(ERROR,"Couldn't connect to host. Please run server "
                                                     "or check network connection : "+ec.message());
                                });
-    /*boost::system::error_code ec;
-    log(TRACE,"prima");
-    boost::asio::connect(m_socket,m_endpointIterator,ec);
-    if(ec) {
-        log(ERROR, "Errore connessione :"+ec.message());
-        return;
-    }
-    log(TRACE,"dopo");*/
-
 
 }
 /**
  * ClientSocket's method which read a file content and then send the file to server
  * @param t_ec
  */
-void ClientSocket::doWriteFile(const boost::system::error_code& t_ec)
+void ClientSocket::doReadFile()
 {
-    if (!t_ec) {
+
         if (m_sourceFile) {
-            m_buf.resize(m_fileSize);
-            m_sourceFile.read(m_buf.data(), m_fileSize);
+            m_buf.resize(computeDimChunk());
+            m_sourceFile.read(m_buf.data(), m_buf.size());
             if (m_sourceFile.fail() && !m_sourceFile.eof()) {
                 log(ERROR,"Failed while reading file");
                 throw std::fstream::failure("Failed while reading file");
             }
-            /*std::stringstream ss;
-            ss << "Send " << m_sourceFile.gcount() << " bytes, total: "
-               << m_sourceFile.tellg() << " bytes";
-               BOOST_LOG_TRIVIAL(trace) << ss.str();*/
-            log(TRACE,"Send"+std::to_string(m_sourceFile.gcount())+ " bytes, total: "+std::to_string(m_sourceFile.tellg())+" bytes");
-            log(TRACE,"Il contenuto del file inviato è :",std::string(m_buf.begin(),m_buf.end()));
-            //std::cout<<m_buf.data()<<std::endl;
+            
+            //log(TRACE,"Send"+std::to_string(m_sourceFile.gcount())+ " bytes, total: "+std::to_string(m_sourceFile.tellg())+" bytes");
+            //log(TRACE,"Il contenuto del chunk da inviare è :",std::string(m_buf.begin(),m_buf.end()));
             auto buf = boost::asio::buffer(m_buf.data(), static_cast<size_t>(m_sourceFile.gcount()));
-            m_sourceFile.close();
+            log(TRACE,"Dimensione buffer : "+std::to_string(buf.size()));
+            //m_sourceFile.close();
             writeFileContent(buf);
         }
-    } else {
-        BOOST_LOG_TRIVIAL(error) << "Error: " << t_ec.message();
-    }
+
+}
+/**
+ * ClientSocket's method which compute the dimension of the current chunck to send to server
+ */
+int ClientSocket::computeDimChunk(){
+    if (m_sendChunks == m_chunks-1 ) //se è l'ultimo chunk
+        return m_fileSize-m_sendChunks*DIM_CHUNK;
+    return DIM_CHUNK;
 }
 /**
  * ClientSocket's method which builds the correct header accord to messageType passed as parameter
@@ -299,12 +297,7 @@ void ClientSocket::buildHeader(messageType mt){
             break;
     }
     log(TRACE,"L'header costruito è:",m_request);
-    //debug
-    /*auto bufs=m_request.data();
-    std::cout<<"HEADER"<<std::endl;
-    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_request.size());
-    std::cout<<"FINE HEADER"<<std::endl;
-    BOOST_LOG_TRIVIAL(trace) << "Request header size: " << m_request.size();*/
+
     }
 /**
  * ClientSocket's method which performs an update action (send to server the path and then the new content of the file)
@@ -421,7 +414,7 @@ void ClientSocket::writeHeader(Buffer& t_buffer) {
                              t_buffer,
                              [this](boost::system::error_code ec, size_t) {
                                  if(!ec) {
-                                     std::cout << "header inviato" << std::endl;
+                                     log(TRACE,"Header inviato");
 
                                  }
                              });
@@ -438,7 +431,8 @@ void ClientSocket::writeFileContent(Buffer& t_buffer)
                              t_buffer,
                              [this](boost::system::error_code ec, size_t )
                              {
-                                 std::cout<<"file inviato"<<std::endl;
+                                 log(TRACE,"Chunck inviato");
+                                 m_sendChunks++;
 
                              });
     };
@@ -455,7 +449,7 @@ void ClientSocket::waitResponse (messageType mt,const std::function<void (std::s
                          if (!ec)
                              processResponse(bytes,mt,action);
                          else
-                             std::cout<<"errore in waitResponse"<<std::endl;
+                             log(ERROR,"errore in waitResponse");
                      });
 }
 /**
@@ -470,7 +464,7 @@ void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt,con
     analyzeResponse(m_responseType,mt,action);
 }
 /**
- * Clientsocket's method which analyses e resposne from server
+ * Clientsocket's method which analyses the response from server
  * @param response
  * @param mt
  * @param action
@@ -481,6 +475,18 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
     switch(rt){
         case OK:
             log(TRACE,"Server ha risposto con OK , tutto è andato a buon fine");
+            if (m_messageType==CREATE_FILE || m_messageType==UPDATE) {
+                log(TRACE,"I chunks inviati sono : "+std::to_string(m_sendChunks));
+                if (m_sendChunks < m_chunks) {
+                    doReadFile();
+                    waitResponse(mt, action);
+                }
+                else {
+                    log(TRACE,"Intero file inviato correttamente.");
+                    m_sendChunks = 0;
+                    m_sourceFile.close();
+                }
+            }
             break;
             case INTERNAL_ERROR: //ritento
             log(TRACE,"Server ha risposto con internal error. Qualcosa è andato storto , ritento");
@@ -524,51 +530,6 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
             update(m_path,action);
             break;
     }
-    /*if (response=="OK") {
-        std::cout << "Server ha risposto con OK , tutto è andato a buon fine" << std::endl;
-        action(m_path);
-    }
-    if (response=="INTERNAL_ERROR") { //ritento
-        std::cout<<"Server ha risposto con internal error. Qaulcosa è andato stroto , ritento"<<std::endl;
-        switch (mt){
-            case UPDATE:
-                update(m_path,action);
-                break;
-            case UPDATE_NAME:
-                updateName(m_path,m_newName,action);
-                break;
-            case REMOVE:
-                remove(m_path,action);
-                break;
-            case CREATE_FILE:
-                createFile(m_path,action);
-                break;
-            case CREATE_DIR:
-                createDir(m_path,action);
-                break;
-            case SYNC_FILE:
-                syncFile(m_path,action);
-                break;
-            case SYNC_DIR:
-                syncDir(m_path,action);
-                break;
-        }
-    }
-    if (response=="NOT_PRESENT"){
-        std::cout<<"Server ha risposto con not present"<<std::endl;
-        if(mt==SYNC_FILE)
-            createFile(m_path,action);
-        if(mt==SYNC_DIR)
-            createDir(m_path,action);
-        if(mt==UPDATE)
-            createFile(m_path,action);
-        if(mt==UPDATE_NAME)
-            createFile(m_path,action);
-    }
-    if (response=="OLD_VERSION") {
-        std::cout<<"Server ha risposto con old version"<<std::endl;
-        update(m_path,action);
-    }*/
 
 }
 

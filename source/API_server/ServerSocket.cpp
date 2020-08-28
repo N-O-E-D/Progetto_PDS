@@ -7,6 +7,7 @@
 #include "ServerSocket.h"
 //la lunghezza della challenge è definita ed è pari a LENGTHCHALLENGE
 #define LENGTHCHALLENGE 100
+#define DIM_CHUNK 32000
 #define DEBUG 1
 
 /**
@@ -43,14 +44,15 @@ void Session::readAsyncSome(int dim,functionType ft){
     auto self = shared_from_this();
     m_buf.clear();
     m_buf.resize(dim);
-    //std::cout << "dimensione buffer : " << m_buf.size()<<std::endl;
     log(TRACE,"Dimensione buffer : "+std::to_string(m_buf.size()));
-
-    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), dim),
+    if(ft==READ_FILE)
+        log(TRACE,"Sto leggendo il "+std::to_string(m_receivedChunks+1)+" chunk");
+    m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_buf.size()),
                              [this, self,ft](boost::system::error_code ec, size_t bytes) {
                                  if (!ec)
                                     switch (ft){
                                      case READ_FILE:
+                                         m_receivedChunks++;
                                          doReadFileContent(bytes);
                                          break;
                                      case DECRYPT_CRYPTO_CHALLENGE:
@@ -66,35 +68,16 @@ void Session::readAsyncSome(int dim,functionType ft){
  */
 void Session::processRead(size_t t_bytesTransferred)
 {
-    /*BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << "(" << t_bytesTransferred << ")"
-                             << ", in_avail = " << m_requestBuf_.in_avail() << ", size = "
-                             << m_requestBuf_.size() << ", max_size = " << m_requestBuf_.max_size() << ".";*/
-    //debug
+
     log(TRACE,"Bytes transferred :("+std::to_string(t_bytesTransferred)+"),in avail = "+std::to_string(m_requestBuf_.in_avail())+", size = "+std::to_string(m_requestBuf_.size())
                             +", max_size = "+std::to_string(m_requestBuf_.max_size())+".");
 
-    /*auto bufs=m_requestBuf_.data();
-    std::cout<<"dimensione bufRequest : "<<m_requestBuf_.size()<<std::endl;
-    std::cout<<"HEADER"<<std::endl;
-    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_requestBuf_.size());
-    std::cout<<"FINE HEADER"<<std::endl;
-    //fine debug*/
     log(TRACE,"Ho ricevuto questo header:",m_requestBuf_);
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
-    //m_requestBuf_.consume(m_requestBuf_.size());
     if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
-        //std::cout<<"Sto leggendo il contenuto del file..."<<std::endl;
         log(TRACE,"Sto leggendo il contenuto del file...");
-        readAsyncSome(m_fileSize,READ_FILE);
-        /*auto self = shared_from_this();
-        m_buf.resize(m_fileSize);
-        std::cout << "dimensione buffer : " << m_buf.size()<<std::endl;
-        m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_fileSize),
-                                 [this, self](boost::system::error_code ec, size_t bytes) {
-                                     if (!ec)
-                                         doReadFileContent(bytes);
-                                 });*/
+        readAsyncSome(computeDimChunk(),READ_FILE);
     }
     else if(m_messageType=="AUTH") {
         if(m_server.checkCredenziali(m_username)==OK) {
@@ -104,32 +87,24 @@ void Session::processRead(size_t t_bytesTransferred)
         else sendToClient(WRONG_USERNAME);
     }
     else if(m_messageType=="AUTH_CHALLENGE"){
-        //std::cout<<"Sto leggendo l'iv e la challenge cifrata..."<<std::endl;
         log(TRACE,"Sto leggendo l'iv e la challenge cifrata...");
         readAsyncSome(m_iv.size()+m_cryptoChallenge.size(),DECRYPT_CRYPTO_CHALLENGE);
-        /*auto self = shared_from_this();
-        m_buf.clear();
-        m_buf.resize(m_iv.size()+m_cryptoChallenge.size());
-        std::cout<<m_buf.size()<<std::endl;
-        m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_buf.size()),
-                                 [this, self](boost::system::error_code ec, size_t bytes) {
-                                     if (!ec)
-                                         parseAndDecryptCryptoChallenge();
-                                     else std::cout<<"Errore nella lettura dell'iv e della challenge cifrata : "<<ec.message()<<std::endl;
-                                 });*/
     }
     else manageMessage(m_messageType);
+}
+/**
+ * ServerSocket's method which compute the dimension of the current chunck received from the client
+ */
+int Session::computeDimChunk(){
+    if (m_receivedChunks == m_chunks-1 ) //se è l'ultimo chunk
+        return m_fileSize-m_receivedChunks*DIM_CHUNK;
+    return DIM_CHUNK;
 }
 /**
  * Session's method which parses and decrypts the cipher challenge received from client
  */
 void Session::parseAndDecryptCryptoChallenge(){
-    //debug
-    /*printf("ho ricevuto: \n");
-    for (int i=0;i<m_iv.size()+m_cryptoChallenge.size();i++)
-        printf("%02x",(unsigned char)m_buf[i]);
-    printf("\n");*/
-    //fine debug
+
     log(TRACE,"Ho ricevuto iv+challenge : ",std::string(m_buf.begin(),m_buf.end()));
     std::vector<unsigned char> iv_vect;
     std::vector<unsigned char> cc_vect;
@@ -139,16 +114,7 @@ void Session::parseAndDecryptCryptoChallenge(){
         iv_vect[i]=(unsigned char) m_buf[i];
     for (int i=m_iv.size();i<m_iv.size()+m_cryptoChallenge.size();i++)
         cc_vect[i-m_iv.size()]=(unsigned char) m_buf[i];
-    //debug
-    /*printf("Ho letto iv: \n");
-    for (int i=0;i<m_iv.size();i++)
-        printf("%02x",iv_vect[i]);
-    printf("\n");
-    printf("Ho letto la sfida cifrata: \n");
-    for (int i=0;i<cc_vect.size();i++)
-        printf("%02x",cc_vect[i]);
-    printf("\n");*/
-    //fine debug
+
     log(TRACE,"Ho letto iv: ",iv_vect);
     log(TRACE,"Ho letto la sfida cifrata: ",cc_vect);
     std::string password;
@@ -157,16 +123,13 @@ void Session::parseAndDecryptCryptoChallenge(){
         return;
     }
     std::vector<unsigned char> key=HKDF(password, iv_vect);
-    //std::cout<<"Lunghezza chiave : "<<key.size()<<std::endl;
     log(TRACE,"Lunghezza chiave : "+std::to_string(key.size()));
     std::vector<unsigned char> dec_challenge=decrypt(cc_vect,iv_vect,key);
     if(CRYPTO_memcmp((unsigned char*)m_challenge.data(),dec_challenge.data(),LENGTHCHALLENGE)==0) {
-        //std::cout << "AUTENTICAZIONE RIUSCITA" << std::endl;
         log(TRACE,"AUTENTICAZIONE RIUSCITA");
         sendToClient(OK);
     }
     else {
-        //std::cout<<"AUTENTICAZIONE FALLITA"<<std::endl;
         log(TRACE,"AUTENTICAZIONE FALLITA");
         sendToClient(WRONG_PASSWORD);
     }
@@ -179,39 +142,11 @@ void Session::genChallenge(){
     m_challenge.resize(challenge.size());
     for (int i=0;i<challenge.size();i++)
         m_challenge[i]=(char)challenge[i];
-    //debug
-    /*printf("La challenge generata è: \n");
-    for (int i=0;i<m_challenge.size();i++)
-        printf("%02x",(unsigned char)m_challenge[i]);
-    printf("\n");
-    std::cout<<challenge.size()<<std::endl;*/
-    //fine debug
+
     log(TRACE,"La challenge generata è : ",m_challenge);
     sendToClient(CHALLENGE);
     readAsyncUntil();
-    //auto self=shared_from_this();
-    //auto buf = boost::asio::buffer(challenge.data(), LENGTHCHALLENGE);
-    //printf("eeee\n");
-    /*boost::asio::async_write(m_socket,
-                             buf,
-                             [this](boost::system::error_code ec, size_t bytes)
-                             {
-                                std::cout<<"challenge inviata, aspetto la challenge cifrata..."<<std::endl;
-                                if(!ec){
-                                    m_requestBuf_.consume(m_requestBuf_.size());
-                                    async_read_until(m_socket, m_requestBuf_, "\n\n",
-                                                     [this](boost::system::error_code ec, size_t bytes)
-                                                     {
 
-                                                         if (!ec)
-                                                             processRead(bytes);
-                                                         else
-                                                             handleError(__FUNCTION__, ec);
-                                                     });
-                                }
-
-
-                             });*/
 }
 /**
  * Session's method which parses the data (from stream) receved from client
@@ -238,7 +173,10 @@ void Session::readData(std::istream &stream)
     }
     if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
         stream >> m_fileSize;
-        log(TRACE,"Lunghezza file : "+m_fileSize);
+        log(TRACE,"Lunghezza file : "+std::to_string(m_fileSize));
+        m_chunks=((int)m_fileSize)/DIM_CHUNK +1;
+        m_receivedChunks=0;
+        log(TRACE,"Il numero dei chunks da leggere è pari a : "+std::to_string(m_chunks));
     }
     if (m_messageType=="SYNC_FILE") {
         stream >> m_mdvalue;
@@ -248,24 +186,6 @@ void Session::readData(std::istream &stream)
         log(TRACE,"Il path della cartella da sincronizzare è :"+m_pathName);
     }
         
-    //debug
-    /*std::cout<< m_messageType<<std::endl;
-    std::cout<< m_pathName<<std::endl;
-    if(m_messageType=="UPDATE_NAME")
-        std::cout<< m_newName<<std::endl;
-    if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE")
-        std::cout <<m_fileSize<<std::endl;
-    if (m_messageType=="SYNC_FILE"){
-        for (int i=0;i<m_mdvalue.size();i++)
-            printf("%02x", (unsigned char)m_mdvalue[i]);
-    }
-    if(m_messageType=="AUTH_CHALLENGE")
-        std::cout<<"lunghezza iv: "+std::to_string(m_iv.size())+"\n"+"lunghezza challenge cifrata: "+std::to_string(m_cryptoChallenge.size())<<std::endl;
-    if(m_messageType == "AUTH")
-        std::cout<<"User che cerca di autenticarsi : "<<m_username<<std::endl;
-
-    BOOST_LOG_TRIVIAL(trace) << m_pathName << " size is " << m_fileSize
-                             << ", tellg = " << stream.tellg();*/
 
 }
 /**
@@ -275,12 +195,10 @@ void Session::readData(std::istream &stream)
 void Session::doReadFileContent(size_t t_bytesTransferred)
 {
     if (t_bytesTransferred > 0) {
+        log(TRACE,"Bytes ricevuti "+std::to_string(t_bytesTransferred));
        m_file.insert(m_file.end(),m_buf.begin(),m_buf.end());
     }
-    //std::cout<<"ho ricevuto questo file: "<<std::endl;
-    /*for (int i=0;i<m_file.size();i++)
-        std::cout<<m_file.at(i);*/
-    log(TRACE,"Ho ricevuto questo file : "+std::string(m_file.begin(),m_file.end()));
+    log(TRACE,"Ho ricevuto questo chunk : "+std::string(m_file.begin(),m_file.end()));
     manageMessage(m_messageType);
 
 }
@@ -310,6 +228,11 @@ void Session::manageMessage(std::string const& messageType){
         rt=m_server.syncFile(m_pathName,(unsigned char*) m_mdvalue.data(),(unsigned int)m_mdvalue.size());
 
     sendToClient(rt);
+    if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE")
+        if(m_receivedChunks<m_chunks)
+            readAsyncSome(computeDimChunk(),READ_FILE);
+        else m_receivedChunks=0;
+
 }
 /**
  * Session method's which builds the header and sends it to client

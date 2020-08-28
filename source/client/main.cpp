@@ -82,10 +82,10 @@ int main(int argc, char** argv) {
     }
     // 4. Consumer process
     std::pair<std::string, Status> path;
-    //while(true){
+    while(true){
         //ioService.run();
         // 4.1 Synchronization
-        if(!pathSyncStatus.isSynced())
+        /*if(!pathSyncStatus.isSynced())
             pathSyncStatus.iterate_map([&socket,&ioService] (const std::pair<std::string,SyncStatus>& path) -> void {
                 // 4.1.1 If already synced return
                 if( path.second == SyncStatus::Synced ) return;
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
                     socket.syncFile(path.first, syncHandler);
                 ioService.run();
                 ioService.restart();
-            });
+            });*/
         if(path_to_process.pop(path)){
             // 4.2 Send the corresponding message
             try{
@@ -130,13 +130,13 @@ int main(int argc, char** argv) {
                 }
                 ioService.run();
                 ioService.restart();
-                //log(TRACE,"fuori");
+                log(TRACE,"fuori");
             } catch (std::exception& e){
                 std::cout << e.what() << std::endl;
             }
         }
 
-    //}
+    }
     t1.join();
     return 0;
 }
