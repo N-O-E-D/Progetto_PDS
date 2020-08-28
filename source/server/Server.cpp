@@ -41,7 +41,7 @@ responseType Server::update(std::string const& path, const std::vector<char>& re
 
     //crea un file con nome uguale (ma con minima differenza per non rimpiazzare l'originale)
     std::string tmpname(userPath.string()+"tmp");
-    std::ofstream recfile(tmpname, std::ofstream::binary);
+    std::ofstream recfile(tmpname, std::ofstream::binary | std::ofstream::app);
 
     if(recfile.is_open()){
         try{
@@ -153,7 +153,7 @@ responseType Server::createFile(std::string const& path, const std::vector<char>
     const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
     //std::cout<<userPath<<std::endl;
 
-    std::ofstream recfile(userPath.string(), std::ofstream::binary);
+    std::ofstream recfile(userPath.string(), std::ofstream::binary | std::ofstream::app);
 
     if(recfile.is_open()){
         try{
