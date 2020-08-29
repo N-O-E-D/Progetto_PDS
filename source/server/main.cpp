@@ -196,6 +196,7 @@ void handleSocket(int portnum){
 
 int main()
 {
+    /*
     //Carica le credenziali in memoria
     const std::string filename("../credenziali.txt");
     loadUsers(filename);
@@ -213,6 +214,7 @@ int main()
     //boost::asio::post(pool,[](){handleSocket(5001);});
 
     pool.join();
+    */
 /*
     const std::string filename("../credenziali.txt");
     const std::string username("Bruno");
@@ -229,4 +231,13 @@ int main()
 
     return 0;
 */
+
+    BIGNUM *prova = BN_new();
+    Cookie c;
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    Cookie c2(prova);
+    std::cout<<c.is_expired()<<std::endl;
+
+    return 0;
+
 }
