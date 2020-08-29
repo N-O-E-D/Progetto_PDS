@@ -8,7 +8,7 @@ int main(){
     //for(int i = 0; i < md_len; i++)
     //    printf("%02x", md_value[i]);
     //printf("\n");
-    std::vector<unsigned char> iv=genRandomBytes(16);
+    /*std::vector<unsigned char> iv=genRandomBytes(16);
     std::vector<unsigned char> key= genRandomBytes(32);
     std::vector<unsigned char> m=genRandomBytes(100);
     for (int i=0;i<m.size();i++)
@@ -22,7 +22,7 @@ int main(){
     std::vector<unsigned char> ff_dec=decrypt(ff,iv,key2);
     if(CRYPTO_memcmp(m.data(),ff_dec.data(),m.size() )!=0)
         std::cout<<"diversi"<<std::endl;
-    else std::cout<<"uguali"<<std::endl;
+    else std::cout<<"uguali"<<std::endl;*/
     //std::vector<unsigned char> hdf=HKDF("ciaoooo",genRandomBytes(32));
     return 0;
 }

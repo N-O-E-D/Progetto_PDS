@@ -76,10 +76,10 @@ int main(int argc, char** argv) {
     std::cout << "Please insert password: ";
     std::cin >> password;
     // 3.2 Call authentication method
-    if(socket.authenticate(username, password) != responseType::OK) {
+    /*if(socket.authenticate(username, password) != responseType::OK) {
         std::cerr << "Authentication error" << std::endl;
         return -2;
-    }
+    }*/
     // 4. Consumer process
     std::pair<std::string, Status> path;
     while(true){
@@ -101,6 +101,11 @@ int main(int argc, char** argv) {
             // 4.2 Send the corresponding message
             try{
                 //ioService.stop();
+                // 3.2 Call authentication method
+                if(socket.authenticate(username, password) != responseType::OK) {
+                    std::cerr << "Authentication error" << std::endl;
+                    return -2;
+                }
                 switch(path.second) {
                     case Status::FileCreated:
                         std::cout << "File created: " << path.first << '\n';

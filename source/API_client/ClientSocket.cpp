@@ -192,6 +192,8 @@ responseType ClientSocket::processResponseSync(){
  */
 void ClientSocket::openFile(std::string const& t_path)
 {
+    if(m_sourceFile.is_open())
+        m_sourceFile.close();
     m_sourceFile.open(t_path, std::ios_base::binary);
     if (m_sourceFile.fail())
         throw std::fstream::failure("Failed while opening file " + t_path);
@@ -220,6 +222,8 @@ void ClientSocket::doConnect()
                                        //controllo anche se devo inviare il contenuto di un file
                                        if(m_messageType==UPDATE || m_messageType==CREATE_FILE)
                                            doReadFile();
+
+
 
                                    } else log(ERROR,"Couldn't connect to host. Please run server "
                                                     "or check network connection : "+ec.message());
@@ -263,6 +267,7 @@ int ClientSocket::computeDimChunk(){
  * @param mt
  */
 void ClientSocket::buildHeader(messageType mt){
+    m_request.consume(m_request.size());
     std::ostream requestStream(&m_request);
     switch (mt) {
         case UPDATE:
@@ -309,7 +314,9 @@ void ClientSocket::update(const std::string &path,const std::function<void (std:
     m_messageType=UPDATE;
     openFile(m_path);
     buildHeader(UPDATE);
-    doConnect();
+    //doConnect();
+    writeHeader(m_request);
+    doReadFile();
     waitResponse(UPDATE,action);
 }
 /**
@@ -323,7 +330,8 @@ void ClientSocket::updateName(const std::string &path,std::string const& newName
     m_messageType=UPDATE_NAME;
     m_newName=newName;
     buildHeader(UPDATE_NAME);
-    doConnect();
+    //doConnect();
+    writeHeader(m_request);
     waitResponse(UPDATE_NAME,action);
 }
 /**
@@ -335,7 +343,8 @@ void ClientSocket::remove(const std::string &path,const std::function<void (std:
     m_path=path;
     m_messageType=REMOVE;
     buildHeader(REMOVE);
-    doConnect();
+    //doConnect();
+    writeHeader(m_request);
     waitResponse(REMOVE,action);
 }
 /**
@@ -348,7 +357,9 @@ void ClientSocket::createFile(const std::string &path,const std::function<void (
     m_messageType=CREATE_FILE;
     openFile(m_path);
     buildHeader(CREATE_FILE);
-    doConnect();
+    //doConnect();
+    writeHeader(m_request);
+    doReadFile();
     waitResponse(CREATE_FILE,action);
 }
 /**
@@ -360,7 +371,8 @@ void ClientSocket::createDir(const std::string &path,const std::function<void (s
     m_path=path;
     m_messageType=CREATE_DIR;
     buildHeader(CREATE_DIR);
-    doConnect();
+    //doConnect();
+    writeHeader(m_request);
     waitResponse(CREATE_DIR,action);
 }
 /**
@@ -372,7 +384,8 @@ void ClientSocket::syncDir(std::string const& path,const std::function<void (std
     m_path=path;
     m_messageType=SYNC_DIR;
     buildHeader(SYNC_DIR);
-    doConnect();
+    //doConnect();
+    writeHeader(m_request);
     waitResponse(SYNC_DIR,action);
 }
 /**
@@ -389,15 +402,9 @@ void ClientSocket::syncFile(std::string const& path,const std::function<void (st
     unsigned int md_len=computeHash(path, md_value);
 
     m_mdlen=md_len;
-    /*printf("digest: ");
-    for(int i = 0; i < md_len; i++)
-        printf("%02x", md_value[i]);
-    printf("\n");*/
     log(TRACE,"The digest is:",std::vector<unsigned char>(md_value,md_value+md_len));
     std::string sName(reinterpret_cast<char* >(md_value),(size_t) md_len);
     m_mdvalue=sName;
-    /*for(int i = 0; i < md_len; i++)
-        printf("%02x", (unsigned char)sName[i]);*/
     log(TRACE,"The digest (string) is:",m_mdvalue);
     buildHeader(SYNC_FILE);
     doConnect();
@@ -529,6 +536,9 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
             log(TRACE,"Server ha risposto con old version");
             update(m_path,action);
             break;
+        case NON_AUTHENTICATED:
+            log(TRACE,"Server ha risposto con non authenticated.");
+            break;
     }
 
 }
@@ -614,7 +624,8 @@ void drawHeader(boost::asio::streambuf const& s){
 responseType stringToEnum(std::string const& s){
     std::unordered_map <std::string,responseType> table={{"OK",OK},{"WRONG_USERNAME",WRONG_USERNAME},{"WRONG_PASSWORD",WRONG_PASSWORD},
                                                          {"CONNECTION_ERROR",CONNECTION_ERROR},{"UNDEFINED",UNDEFINED},{"CHALLENGE",CHALLENGE},
-                                                         {"INTERNAL_ERROR",INTERNAL_ERROR},{"NOT_PRESENT",NOT_PRESENT},{"OLD_VERSION" , OLD_VERSION}};
+                                                         {"INTERNAL_ERROR",INTERNAL_ERROR},{"NOT_PRESENT",NOT_PRESENT},{"OLD_VERSION" , OLD_VERSION},
+                                                         {"NON_AUTHENTICATED" , NON_AUTHENTICATED}};
     auto it=table.find(s);
     if(it != table.end())
         return it->second;

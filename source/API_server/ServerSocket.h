@@ -56,7 +56,7 @@ private:
     int m_receivedChunks;
     std::vector<char> m_file;
     Server m_server;
-
+    bool isAuthenticated;
 };
 
 

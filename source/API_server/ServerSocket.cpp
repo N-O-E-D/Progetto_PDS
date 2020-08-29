@@ -15,7 +15,9 @@
  * @param t_socket
  * @param server
  */
-Session::Session(TcpSocket t_socket,Server server): m_socket(std::move(t_socket)),m_server(server){}
+Session::Session(TcpSocket t_socket,Server server): m_socket(std::move(t_socket)),m_server(server){
+    isAuthenticated = false;
+}
 
 /**
  * Session's method which reads until the delimeter in asynchronous way
@@ -62,6 +64,7 @@ void Session::readAsyncSome(int dim,functionType ft){
                                  else log(ERROR,"Errore nella async read some : "+ec.message());
                              });
 }
+
 /**
  * Session's method which processes the message from client
  * @param t_bytesTransferred
@@ -75,7 +78,12 @@ void Session::processRead(size_t t_bytesTransferred)
     log(TRACE,"Ho ricevuto questo header:",m_requestBuf_);
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
-    if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
+    if(!isAuthenticated && (m_messageType!= "AUTH" && m_messageType!="AUTH_CHALLENGE")){
+        log(ERROR,"UTENTE NON AUTENTICATO");
+        sendToClient(NON_AUTHENTICATED);
+    }
+
+    else if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
         log(TRACE,"Sto leggendo il contenuto del file...");
         readAsyncSome(computeDimChunk(),READ_FILE);
     }
@@ -127,13 +135,16 @@ void Session::parseAndDecryptCryptoChallenge(){
     std::vector<unsigned char> dec_challenge=decrypt(cc_vect,iv_vect,key);
     if(CRYPTO_memcmp((unsigned char*)m_challenge.data(),dec_challenge.data(),LENGTHCHALLENGE)==0) {
         log(TRACE,"AUTENTICAZIONE RIUSCITA");
+        isAuthenticated=true;
         sendToClient(OK);
+        readAsyncUntil();
     }
     else {
         log(TRACE,"AUTENTICAZIONE FALLITA");
         sendToClient(WRONG_PASSWORD);
     }
 }
+
 /**
  * Session's method which generates the challange and sends it to client
  */
@@ -185,7 +196,6 @@ void Session::readData(std::istream &stream)
     if(m_messageType=="SYNC_DIR"){
         log(TRACE,"Il path della cartella da sincronizzare è :"+m_pathName);
     }
-        
 
 }
 /**
@@ -207,7 +217,6 @@ void Session::doReadFileContent(size_t t_bytesTransferred)
  * @param messageType
  */
 void Session::manageMessage(std::string const& messageType){
-    //std::cout<<"Invio al server "<<messageType<<std::endl;
     log(TRACE,"Richiamo metodi del server ("+messageType+")...");
     responseType rt;
     m_server.setUserDirectory("Bruno");
@@ -263,24 +272,20 @@ void Session::sendToClient(responseType rt){
         case CHALLENGE:
             responseStream << "CHALLENGE\n"<<m_challenge<<"\n\n";
             break;
+        case NON_AUTHENTICATED:
+            responseStream << "NON_AUTHENTICATED"<<"\n\n";
+            break;
         default:
             std::cout <<"nessun header"<<std::endl;
             return;
 
     }
-    //debug
-    /*auto bufs=m_response.data();
-    std::cout<<"HEADER"<<std::endl;
-    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+m_response.size());
-    std::cout<<"FINE HEADER"<<std::endl;*/
-    //fine debug
     log(TRACE,"L'header da inviare al client è:",m_response);
     boost::asio::async_write(m_socket,
                               m_response,
                              [this,rt](boost::system::error_code ec, size_t )
                              {
                                 log(TRACE,"Messaggio di risposta inviato.");
-                                //std::cout<<"messaggio di risposta inviato "<<std::endl;
                              });
 }
 /**
