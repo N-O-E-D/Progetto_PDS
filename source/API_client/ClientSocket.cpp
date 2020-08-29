@@ -2,6 +2,8 @@
 #include <iostream>
 #include <boost/filesystem/path.hpp>
 #include <boost/log/trivial.hpp>
+#include <unordered_map>
+
 #include "ClientSocket.h"
 //la lunghezza della challenge è definita ed è pari a LENGTHCHALLENGE
 #define LENGTHCHALLENGE 100
@@ -309,7 +311,7 @@ void ClientSocket::buildHeader(messageType mt){
  * @param path
  * @param action
  */
-void ClientSocket::update(const std::string &path,const std::function<void (std::string)> &action) {
+void ClientSocket::update(const std::string &path) {
     m_path=path;
     m_messageType=UPDATE;
     openFile(m_path);
@@ -317,7 +319,7 @@ void ClientSocket::update(const std::string &path,const std::function<void (std:
     //doConnect();
     writeHeader(m_request);
     doReadFile();
-    waitResponse(UPDATE,action);
+    waitResponse(UPDATE);
 }
 /**
  * ClientSocket's method which performs an update name action (send to server the path and then the new name of the file)
@@ -325,34 +327,34 @@ void ClientSocket::update(const std::string &path,const std::function<void (std:
  * @param newName
  * @param action
  */
-void ClientSocket::updateName(const std::string &path,std::string const& newName,const std::function<void (std::string)> &action) {
+void ClientSocket::updateName(const std::string &path,std::string const& newName) {
     m_path=path;
     m_messageType=UPDATE_NAME;
     m_newName=newName;
     buildHeader(UPDATE_NAME);
     //doConnect();
     writeHeader(m_request);
-    waitResponse(UPDATE_NAME,action);
+    waitResponse(UPDATE_NAME);
 }
 /**
  * ClientSocket's method which performs a remove action (send to server the path to remove)
  * @param path
  * @param action
  */
-void ClientSocket::remove(const std::string &path,const std::function<void (std::string)> &action) {
+void ClientSocket::remove(const std::string &path) {
     m_path=path;
     m_messageType=REMOVE;
     buildHeader(REMOVE);
     //doConnect();
     writeHeader(m_request);
-    waitResponse(REMOVE,action);
+    waitResponse(REMOVE);
 }
 /**
  * ClientSocket's method which performs a create file action (send to server the path and then the content of the file)
  * @param path
  * @param action
  */
-void ClientSocket::createFile(const std::string &path,const std::function<void (std::string)> &action) {
+void ClientSocket::createFile(const std::string &path) {
     m_path=path;
     m_messageType=CREATE_FILE;
     openFile(m_path);
@@ -360,40 +362,40 @@ void ClientSocket::createFile(const std::string &path,const std::function<void (
     //doConnect();
     writeHeader(m_request);
     doReadFile();
-    waitResponse(CREATE_FILE,action);
+    waitResponse(CREATE_FILE);
 }
 /**
  * ClientSocket's method which performs a create directory action (send to server the path)
  * @param path
  * @param action
  */
-void ClientSocket::createDir(const std::string &path,const std::function<void (std::string)> &action) {
+void ClientSocket::createDir(const std::string &path) {
     m_path=path;
     m_messageType=CREATE_DIR;
     buildHeader(CREATE_DIR);
     //doConnect();
     writeHeader(m_request);
-    waitResponse(CREATE_DIR,action);
+    waitResponse(CREATE_DIR);
 }
 /**
  * ClientSocket's method which performs a syncronization directory action (send to server the path)
  * @param path
  * @param action
  */
-void ClientSocket::syncDir(std::string const& path,const std::function<void (std::string)> &action){
+void ClientSocket::syncDir(std::string const& path){
     m_path=path;
     m_messageType=SYNC_DIR;
     buildHeader(SYNC_DIR);
     //doConnect();
     writeHeader(m_request);
-    waitResponse(SYNC_DIR,action);
+    waitResponse(SYNC_DIR);
 }
 /**
  * ClientSocket's method which performs a syncronization file action (send to server the path and then the hash of the file)
  * @param path
  * @param action
  */
-void ClientSocket::syncFile(std::string const& path,const std::function<void (std::string)> &action){
+void ClientSocket::syncFile(std::string const& path){
     m_path=path;
     m_messageType=SYNC_FILE;
 
@@ -408,7 +410,7 @@ void ClientSocket::syncFile(std::string const& path,const std::function<void (st
     log(TRACE,"The digest (string) is:",m_mdvalue);
     buildHeader(SYNC_FILE);
     doConnect();
-    waitResponse(SYNC_FILE,action);
+    waitResponse(SYNC_FILE);
 }
 /**
  * ClientSocket's method which sends to server the header in asynchronous way
@@ -448,13 +450,13 @@ void ClientSocket::writeFileContent(Buffer& t_buffer)
  * @param mt
  * @param action
  */
-void ClientSocket::waitResponse (messageType mt,const std::function<void (std::string)> &action){
+void ClientSocket::waitResponse (messageType mt){
     m_response.consume(m_response.size());
     async_read_until(m_socket, m_response, "\n\n",
-                     [this,mt,action](boost::system::error_code ec, size_t bytes)
+                     [this,mt](boost::system::error_code ec, size_t bytes)
                      {
                          if (!ec)
-                             processResponse(bytes,mt,action);
+                             processResponse(bytes,mt);
                          else
                              log(ERROR,"errore in waitResponse");
                      });
@@ -465,10 +467,10 @@ void ClientSocket::waitResponse (messageType mt,const std::function<void (std::s
  * @param mt
  * @param action
  */
-void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt,const std::function<void (std::string)> &action){
+void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt){
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
-    analyzeResponse(m_responseType,mt,action);
+    analyzeResponse(m_responseType,mt);
 }
 /**
  * Clientsocket's method which analyses the response from server
@@ -476,7 +478,7 @@ void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt,con
  * @param mt
  * @param action
  */
-void ClientSocket::analyzeResponse(std::string response, messageType mt,const std::function<void (std::string)> &action){
+void ClientSocket::analyzeResponse(std::string response, messageType mt){
     log(TRACE,response);
     responseType rt=stringToEnum(response);
     switch(rt){
@@ -486,7 +488,7 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
                 log(TRACE,"I chunks inviati sono : "+std::to_string(m_sendChunks));
                 if (m_sendChunks < m_chunks) {
                     doReadFile();
-                    waitResponse(mt, action);
+                    waitResponse(mt);
                 }
                 else {
                     log(TRACE,"Intero file inviato correttamente.");
@@ -499,42 +501,42 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt,const st
             log(TRACE,"Server ha risposto con internal error. Qualcosa è andato storto , ritento");
             switch(mt){
                 case UPDATE:
-                    update(m_path,action);
+                    update(m_path);
                     break;
                 case UPDATE_NAME:
-                    updateName(m_path,m_newName,action);
+                    updateName(m_path,m_newName);
                     break;
                 case REMOVE:
-                    remove(m_path,action);
+                    remove(m_path);
                     break;
                 case CREATE_FILE:
-                    createFile(m_path,action);
+                    createFile(m_path);
                     break;
                 case CREATE_DIR:
-                    createDir(m_path,action);
+                    createDir(m_path);
                     break;
                 case SYNC_FILE:
-                    syncFile(m_path,action);
+                    syncFile(m_path);
                     break;
                 case SYNC_DIR:
-                    syncDir(m_path,action);
+                    syncDir(m_path);
                     break;
             }
             break;
         case NOT_PRESENT:
             log(TRACE,"Server ha risposto con not present");
             if(mt==SYNC_FILE)
-                createFile(m_path,action);
+                createFile(m_path);
             if(mt==SYNC_DIR)
-                createDir(m_path,action);
+                createDir(m_path);
             if(mt==UPDATE)
-                createFile(m_path,action);
+                createFile(m_path);
             if(mt==UPDATE_NAME)
-                createFile(m_path,action);
+                createFile(m_path);
             break;
         case OLD_VERSION:
             log(TRACE,"Server ha risposto con old version");
-            update(m_path,action);
+            update(m_path);
             break;
         case NON_AUTHENTICATED:
             log(TRACE,"Server ha risposto con non authenticated.");

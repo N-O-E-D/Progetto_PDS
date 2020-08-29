@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <unordered_map>
+#include <map>
 #include <string>
 #include <mutex>
 #include <filesystem>
@@ -13,14 +13,11 @@ enum class SyncStatus { Synced, NotSynced };
 
 class PathStatusMap {
 private:
-    std::unordered_map<std::string, SyncStatus> map;
+    std::map<std::string, SyncStatus> map;
     std::mutex m;
 public:
-//    explicit PathStatusMap(const std::string& root_path) {
-//        for (auto &file : std::filesystem::recursive_directory_iterator(root_path))
-//            this->insert(file.path().string(), SyncStatus::NotSynced);
-//    };
     void setRoot(const std::string& root_path){
+        this->insert(root_path, SyncStatus::NotSynced);
         for (auto &file : std::filesystem::recursive_directory_iterator(root_path))
             this->insert(file.path().string(), SyncStatus::NotSynced);
     }
@@ -38,7 +35,11 @@ public:
     template <class P>
     void iterate_map(P action) {
         std::unique_lock ul (m);
-        std::for_each(map.begin(), map.end(), action);
+        for(auto& it : map) {
+            ul.unlock();
+            action(it);
+            ul.lock();
+        }
     }
 
     void setSynced(const std::string& key) {
@@ -58,5 +59,15 @@ public:
                 return false;
         }
         return true;
+    }
+
+    void print() {
+        for(auto& it : map) {
+            std::cout << it.first << " ";
+            if(it.second == SyncStatus::Synced)
+                std::cout << "Synced\n";
+            else
+                std::cout << "Not Synced\n";
+        }
     }
 };

@@ -22,13 +22,13 @@ public:
     using TcpSocket = boost::asio::ip::tcp::socket;
 
     ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator);
-    void update(std::string const& path, const std::function<void (std::string)> &action);
-    void updateName(std::string const& path, std::string const& newName,const std::function<void (std::string)> &action);
-    void remove(std::string const& path, const std::function<void (std::string)> &action);
-    void createFile(std::string const& path, const std::function<void (std::string)> &action);
-    void createDir(std::string const& path, const std::function<void (std::string)> &action);
-    void syncDir(std::string const& path, const std::function<void (std::string)> &action);
-    void syncFile(std::string const& path, const std::function<void (std::string)> &action);
+    void update(std::string const& path);
+    void updateName(std::string const& path, std::string const& newName);
+    void remove(std::string const& path);
+    void createFile(std::string const& path);
+    void createDir(std::string const& path);
+    void syncDir(std::string const& path);
+    void syncFile(std::string const& path);
     responseType authenticate(std:: string const& username, std::string const& password);
 private:
     void openFile(std::string const& t_path);
@@ -40,9 +40,9 @@ private:
     void writeFileContent(Buffer& t_buffer);
     int computeDimChunk();
     void buildHeader(messageType mt);
-    void waitResponse(messageType mt,const std::function<void (std::string)> &action);
-    void processResponse(size_t t_bytesTransferred,messageType mt,const std::function<void (std::string)> &action);
-    void analyzeResponse(std::string response,messageType mt,const std::function<void (std::string)> &action);
+    void waitResponse(messageType mt);
+    void processResponse(size_t t_bytesTransferred,messageType mt);
+    void analyzeResponse(std::string response,messageType mt);
     responseType waitChallenge();
     responseType doConnectSync();
     template<class Buffer>

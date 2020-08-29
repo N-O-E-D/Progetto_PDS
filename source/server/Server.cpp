@@ -6,11 +6,30 @@
 
 //using namespace boost::filesystem;
 
-
+//
+// Created by Giandonato Farina on 29/08/2020.
+//
+std::string pathManipulation(const std::string& path){
+    using namespace std;
+    string newPath;
+    // check if start with ../
+    auto pos = path.find("../");
+    if( pos != string::npos ) {
+        newPath = path.substr(pos + 3);
+        return newPath;
+    }
+    // check if start with ./
+    pos = path.find("./");
+    if( pos != string::npos ) {
+        newPath = path.substr(pos + 2);
+        return newPath;
+    }
+    return path;
+}
 
 /* ***** FILESYSTEM ***** */
 
-void Server::setUserDirectory(const std::string username){  //se la directory dell'utente non esiste, la crea
+void Server::setUserDirectory(const std::string& username){  //se la directory dell'utente non esiste, la crea
 
     const std::string ud(workingdirectory+"/"+username);
     const boost::filesystem::path p(ud);
@@ -24,15 +43,13 @@ void Server::setUserDirectory(const std::string username){  //se la directory de
         std::cout<<"User directory non esistente: "<<p<<" creato."<<std::endl;
     }
     userDirectory = p;
-    return;
 }
 
 responseType Server::update(std::string const& path, const std::vector<char>& recbuffer, const ssize_t& buffsize){
 
     std::cout<<"UPDATE"<<std::endl;
 
-    const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    std::cout<<path<<std::endl;
+    auto userPath = userDirectory / pathManipulation(path);
 
     if(!boost::filesystem::exists(userPath)){
         std::cout<<"Il path "<<userPath<<" non esiste!"<<std::endl;
@@ -103,8 +120,7 @@ responseType Server::remove(std::string const& path){  //se path è una director
 
     std::cout<<"REMOVE"<<std::endl;
 
-    const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    //std::cout<<userPath<<std::endl;
+    auto userPath = userDirectory / pathManipulation(path);
 
     if(!boost::filesystem::exists(userPath)){
         std::cout<<"Il path "<<userPath<<" non esiste!"<<std::endl;
@@ -126,8 +142,7 @@ responseType Server::removeDir(std::string const& path){  //se path è un file, 
 
     std::cout<<"REMOVEDIR"<<std::endl;
 
-    const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    //std::cout<<userPath<<std::endl;
+    auto userPath = userDirectory / pathManipulation(path);
 
     if(!boost::filesystem::exists(userPath)){
         std::cout<<"Il path "<<userPath<<" non esiste!"<<std::endl;
@@ -150,8 +165,7 @@ responseType Server::createFile(std::string const& path, const std::vector<char>
 
     std::cout<<"CREATEFILE"<<std::endl;
 
-    const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    //std::cout<<userPath<<std::endl;
+    auto userPath = userDirectory / pathManipulation(path);
 
     std::ofstream recfile(userPath.string(), std::ofstream::binary | std::ofstream::app);
 
@@ -177,8 +191,7 @@ responseType Server::createDir(std::string const& path){
 
     std::cout<<"CREATEDIR"<<std::endl;
 
-    const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    //std::cout<<userPath<<std::endl;
+    auto userPath = userDirectory / pathManipulation(path);
 
     boost::system::error_code ec;
     boost::filesystem::create_directory(userPath,ec);  //questa versione di create_directory prende il codice errore, pertanto non c'è bisogno di inserirla in un try/catch
@@ -196,8 +209,7 @@ responseType Server::syncDir(std::string const& path){
 
     std::cout<<"SYNCDIR"<<std::endl;
 
-    const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    //std::cout<<userPath<<std::endl;
+    auto userPath = userDirectory / pathManipulation(path);
 
     if(boost::filesystem::exists(userPath)) {
         std::cout<<"Il path esiste!"<<std::endl;
@@ -212,8 +224,7 @@ responseType Server::syncFile(std::string const& path, unsigned char* md_value, 
 
     std::cout << "SYNCFILE" << std::endl;
 
-    const boost::filesystem::path userPath(userDirectory/boost::filesystem::path(path));
-    std::cout<<userPath<<std::endl;
+    auto userPath = userDirectory / pathManipulation(path);
 
     //hash di <path>
 
