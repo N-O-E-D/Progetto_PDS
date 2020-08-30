@@ -17,6 +17,7 @@
  */
 Session::Session(TcpSocket t_socket,Server server): m_socket(std::move(t_socket)),m_server(server){
     isAuthenticated = false;
+    //self=shared_from_this();
 }
 
 /**
@@ -24,10 +25,10 @@ Session::Session(TcpSocket t_socket,Server server): m_socket(std::move(t_socket)
  */
 void Session::readAsyncUntil()
 {
-    auto self = shared_from_this();
+    self = shared_from_this();
     m_requestBuf_.consume(m_requestBuf_.size());
     async_read_until(m_socket, m_requestBuf_, "\n\n",
-                     [this, self](boost::system::error_code ec, size_t bytes)
+                     [this/*, self*/](boost::system::error_code ec, size_t bytes)
                      {
                         if (!ec)
                              processRead(bytes);
@@ -43,14 +44,14 @@ void Session::readAsyncUntil()
  */
 void Session::readAsyncSome(int dim,functionType ft){
 
-    auto self = shared_from_this();
+    self = shared_from_this();
     m_buf.clear();
     m_buf.resize(dim);
     log(TRACE,"Dimensione buffer : "+std::to_string(m_buf.size()));
     if(ft==READ_FILE)
         log(TRACE,"Sto leggendo il "+std::to_string(m_receivedChunks+1)+" chunk");
     m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_buf.size()),
-                             [this, self,ft](boost::system::error_code ec, size_t bytes) {
+                             [this/*, self*/,ft](boost::system::error_code ec, size_t bytes) {
                                  if (!ec)
                                     switch (ft){
                                      case READ_FILE:
@@ -85,17 +86,18 @@ void Session::processRead(size_t t_bytesTransferred)
 
     else if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
         log(TRACE,"Sto leggendo il contenuto del file...");
+        sendToClient(OK);
         readAsyncSome(computeDimChunk(),READ_FILE);
     }
     else if(m_messageType=="AUTH") {
         if(m_server.checkCredenziali(m_username)==OK) {
-            //sendToClient(OK);
             genChallenge();
         }
         else sendToClient(WRONG_USERNAME);
     }
     else if(m_messageType=="AUTH_CHALLENGE"){
         log(TRACE,"Sto leggendo l'iv e la challenge cifrata...");
+        sendToClient(OK);
         readAsyncSome(m_iv.size()+m_cryptoChallenge.size(),DECRYPT_CRYPTO_CHALLENGE);
     }
     else manageMessage(m_messageType);
@@ -156,7 +158,7 @@ void Session::genChallenge(){
 
     log(TRACE,"La challenge generata è : ",m_challenge);
     sendToClient(CHALLENGE);
-    readAsyncUntil();
+    //readAsyncUntil();
 
 }
 /**
@@ -176,7 +178,8 @@ void Session::readData(std::istream &stream)
         m_iv.resize(std::stoi(m_pathName));
         stream>>m_pathName;
         m_cryptoChallenge.resize(std::stoi(m_pathName));
-        log(TRACE,"Lunghezza iv: "+std::to_string(m_iv.size())+"\n"+"Lunghezza challenge cifrata: "+std::to_string(m_cryptoChallenge.size()));
+        log(TRACE,"Lunghezza iv: "+std::to_string(m_iv.size()));
+        log(TRACE,"Lunghezza challenge cifrata: "+std::to_string(m_cryptoChallenge.size()));
     }
     if(m_messageType=="UPDATE_NAME") {
         stream >> m_newName;
@@ -219,7 +222,7 @@ void Session::doReadFileContent(size_t t_bytesTransferred)
 void Session::manageMessage(std::string const& messageType){
     log(TRACE,"Richiamo metodi del server ("+messageType+")...");
     responseType rt;
-    m_server.setUserDirectory("Bruno");
+    m_server.setUserDirectory(m_username);
     //ora che ho tutti i dati ricevuti dal client richiamo le funzioni fornite dalla classe Server a seconda dell'azione
     if (m_messageType=="UPDATE")
         rt=m_server.update(m_pathName,m_file,m_fileSize);
@@ -276,7 +279,7 @@ void Session::sendToClient(responseType rt){
             responseStream << "NON_AUTHENTICATED"<<"\n\n";
             break;
         default:
-            std::cout <<"nessun header"<<std::endl;
+            log(TRACE,"nessun header");
             return;
 
     }
@@ -285,7 +288,14 @@ void Session::sendToClient(responseType rt){
                               m_response,
                              [this,rt](boost::system::error_code ec, size_t )
                              {
+
                                 log(TRACE,"Messaggio di risposta inviato.");
+                                if(rt==OLD_VERSION || rt==NOT_PRESENT){
+                                    log(TRACE,"Aspetto che il client mi invii il file...");
+                                    readAsyncUntil();
+                                }
+                                if(rt==CHALLENGE)
+                                    readAsyncUntil();
                              });
 }
 /**
@@ -320,13 +330,11 @@ ServerSocket::ServerSocket(IoService& t_ioService, short t_port, Server& server)
  */
 void ServerSocket::doAccept()
 {
-    //std::cout<<"server in ascolto"<<std::endl;
     log(TRACE,"Server in ascolto...");
     m_acceptor.async_accept(m_socket,
                             [this](boost::system::error_code ec)
                             {
                                 if (!ec) {
-                                    //std::cout<<"Comunicazione accettata\n";
                                     log(TRACE,"Comunicazione accettata.");
                                     std::make_shared<Session>(std::move(m_socket), std::move(m_server))->start();
                                 }

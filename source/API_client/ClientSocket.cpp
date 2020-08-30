@@ -145,12 +145,14 @@ responseType ClientSocket::genCryptoChallenge(){
 
     m_messageType=AUTH_CHALLENGE;
     buildHeader(AUTH_CHALLENGE);
-    writeHeader(m_request);
-
+    writeSync(m_request);
+    responseType rt=readUntilSync();
+    if(rt==CONNECTION_ERROR)
+        return rt;
     std::vector<unsigned char> ss;
     ss.insert(ss.end(),iv.begin(),iv.end());
     ss.insert(ss.end(),cipherChallenge.begin(),cipherChallenge.end());
-    log(TRACE,"invio: ",ss);
+    log(TRACE,"Invio: ",ss);
     auto buf = boost::asio::buffer(ss.data(), m_iv.size()+m_cryptoChallenge.size());
     return writeSync(buf);
 }
@@ -318,7 +320,7 @@ void ClientSocket::update(const std::string &path) {
     buildHeader(UPDATE);
     //doConnect();
     writeHeader(m_request);
-    doReadFile();
+    //doReadFile();
     waitResponse(UPDATE);
 }
 /**
@@ -361,7 +363,7 @@ void ClientSocket::createFile(const std::string &path) {
     buildHeader(CREATE_FILE);
     //doConnect();
     writeHeader(m_request);
-    doReadFile();
+    //doReadFile();
     waitResponse(CREATE_FILE);
 }
 /**
@@ -409,7 +411,8 @@ void ClientSocket::syncFile(std::string const& path){
     m_mdvalue=sName;
     log(TRACE,"The digest (string) is:",m_mdvalue);
     buildHeader(SYNC_FILE);
-    doConnect();
+    //doConnect();
+    writeHeader(m_request);
     waitResponse(SYNC_FILE);
 }
 /**

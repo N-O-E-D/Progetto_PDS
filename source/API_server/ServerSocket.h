@@ -38,6 +38,7 @@ private:
     void parseAndDecryptCryptoChallenge();
     int computeDimChunk();
     TcpSocket m_socket;
+    std::shared_ptr<Session> self;
     std::vector<char> m_buf;
     boost::asio::streambuf m_requestBuf_;
     boost::asio::streambuf requestBuf;
