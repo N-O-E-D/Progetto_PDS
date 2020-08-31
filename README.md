@@ -44,3 +44,7 @@ richieste dai client. Il server deve essere progettato per gestirne più di un c
 - video: https://www.youtube.com/watch?v=rwOv_tw2eA4
 - slides: https://github.com/CppCon/CppCon2016/blob/master/Tutorials/Asynchronous%20IO%20with%20Boost.Asio/Asynchronous%20IO%20with%20Boost.Asio%20-%20Michael%20Caisse%20-%20CppCon%202016.pdf
 
+##TODO
+Lorenzo: risolvere bug Remove e comunicazione e capire perche funziona multiclient
+Sistemare codice
+Gestione errori ed eccezioni (mettere a tentativi)
