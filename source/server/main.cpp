@@ -15,30 +15,6 @@
 #include <boost/iterator.hpp>
 #include <boost/cstdint.hpp>
 
-std::map<std::string,int> commands = {
-        {"UPDATE",1},
-        {"UPDATENAME",2},
-        {"REMOVE",3},
-        {"REMOVEDIR",4},
-        {"CREATEFILE",5},
-        {"CREATEDIR",6},
-        {"SYNCDIR",7},
-        {"SYNCFILE",8},
-};
-
-using boost::asio::ip::tcp;
-
-int selectComando(std::string& str, std::string& path, std::string& newpath){
-    str.pop_back();
-    str.pop_back();
-    auto cmd = str.substr(0,str.find(" "));  //i comandi sono del tipo "UPDATE path", quindi prendo la sottostringa fino al primo spazio, quindi il comando
-    str.erase(0,cmd.length()+1);
-    path = str.substr(0,str.find(" "));
-    str.erase(0,path.length()+1);
-    newpath = str;
-    std::cout<<cmd<<" "<<path<<" "<<newpath<<std::endl;
-    return commands[cmd];
-}
 void handleSocket(int portnum){
 
 /*
