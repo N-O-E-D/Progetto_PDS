@@ -5,8 +5,12 @@
 #ifndef PROVA_SOCKET_ASIO_SERVER_H
 #define PROVA_SOCKET_ASIO_SERVER_H
 
+enum responseType{
+    OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR, WRONG_PASSWORD, WRONG_USERNAME, CHALLENGE , NON_AUTHENTICATED, EXPIRED
+};
+
 #include "../../CryptoFunctions/CryptoExecutor.h"
-#include "Cookie.h"
+#include "CookieMap.h"
 #include "openssl/bn.h"
 #include <shared_mutex>
 #include <iostream>
@@ -22,10 +26,6 @@
 #include <boost/iterator.hpp>
 #include <boost/cstdint.hpp>
 #include <fstream>
-
-enum responseType{
-    OK, NOT_PRESENT, OLD_VERSION, INTERNAL_ERROR, WRONG_PASSWORD, WRONG_USERNAME, CHALLENGE , NON_AUTHENTICATED, EXPIRED
-};
 
 responseType loadUsers(const std::string& filename);
 
@@ -51,12 +51,6 @@ public:
     responseType checkCredenziali(const std::string& username, const std::string& password);
     responseType checkCredenziali(const std::string& username);
     responseType UserToPassword(const std::string& username, std::string& password);
-
-    responseType insertCookie(const std::string username, Cookie& cookie);
-    responseType getCookie(const std::string username, Cookie& cookie);
-    responseType updateCookie(const std::string username);
-    responseType updateCookie(const std::string username, const Cookie& cookie);
-    responseType isValid(const std::string username, const Cookie& cookie);
 };
 
 
