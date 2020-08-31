@@ -195,13 +195,14 @@ void handleSocket(int portnum){
 
 int main()
 {
-
     //Carica le credenziali in memoria
     const std::string filename("../credenziali.txt");
     loadUsers(filename);
 
     //Setta la working directory del server
     boost::filesystem::current_path(workingdirectory);
+
+    handleSocket(5000); /*
 
     //launch the pool with num_threads threads
     //Ogni thread gestisce un client (su una porta diversa), tramite una coda di richieste provenienti dallo stesso
@@ -210,10 +211,10 @@ int main()
 
     //submit a function to the pool
     boost::asio::post(pool,[](){handleSocket(5000);});
-    //boost::asio::post(pool,[](){handleSocket(5001);});
+//    boost::asio::post(pool,[](){handleSocket(5001);});
 
     pool.join();
-
+*/
 /*
     const std::string filename("../credenziali.txt");
     const std::string username("Bruno");

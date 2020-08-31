@@ -12,7 +12,9 @@ FileSystemWatcher::FileSystemWatcher(const std::string& path_to_watch, std::chro
 }
 
 void FileSystemWatcher::start(const std::function<void(std::string, Status)> &action) {
+    std::unique_lock ul (m);
     while(running_) {
+        ul.unlock();
         // Wait for "delay" milliseconds
         std::this_thread::sleep_for(delay);
         auto it = paths_.begin();
@@ -46,12 +48,18 @@ void FileSystemWatcher::start(const std::function<void(std::string, Status)> &ac
                 }
             }
         }
+        ul.lock();
     }
 }
 
 bool FileSystemWatcher::contains(const std::string &key) {
     auto el = paths_.find(key);
     return el != paths_.end();
+}
+
+void FileSystemWatcher::stop() {
+    std::unique_lock ul (m);
+    running_ = false;
 }
 
 

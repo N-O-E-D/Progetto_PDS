@@ -62,6 +62,7 @@ public:
     }
 
     void print() {
+        std::unique_lock ul(m);
         for(auto& it : map) {
             std::cout << it.first << " ";
             if(it.second == SyncStatus::Synced)

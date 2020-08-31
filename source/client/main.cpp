@@ -40,6 +40,27 @@ void fileSystemWatcher(const std::string& root) {
         pathSyncStatus.setNotSynced(path_to_watch);
     });
 }
+
+void fswHandler (FileSystemWatcher* fw){
+    fw->start([] (const std::string& path_to_watch, Status status) -> void {
+        // Process only regular files or directories
+        if( !(std::filesystem::is_regular_file(std::filesystem::path(path_to_watch))
+              || std::filesystem::is_directory(std::filesystem::path(path_to_watch)))
+            && status != Status::Erased)
+            return;
+
+        // Inset the path into queue, if it is full enter the if
+        if(!path_to_process.push(make_pair(path_to_watch, status))){
+            // Remove the oldest element and push the new one
+            path_to_process.pop();
+            path_to_process.push(make_pair(path_to_watch, status));
+        }
+        // Set path as NotSynced
+        pathSyncStatus.setNotSynced(path_to_watch);
+    });
+}
+
+
 void initScreen(){
     std::cout << R"(
  _____________________________________________________________________________
@@ -58,8 +79,9 @@ void initScreen(){
  |___________________________________________________________________________|
 
 
-)" << "\n\n\n";
+    )" << "\n\n";
 }
+
 // program receive parameters as arguments
 // program folder address port [time]
 int main(int argc, char** argv) {
@@ -75,7 +97,10 @@ int main(int argc, char** argv) {
     pathSyncStatus.setRoot(root);
     initScreen(); //modified by Lorenzo
     // 1. Start File System Watcher
-    std::thread t1{fileSystemWatcher, root};
+    FileSystemWatcher fw{root, std::chrono::milliseconds(5000)};
+    std::thread t1 {fswHandler, &fw};
+
+//    std::thread t1{fileSystemWatcher, root};
 
     // 2. Open socket (MODIFIED BY LORENZO)
     boost::asio::io_service ioService;
@@ -135,6 +160,7 @@ int main(int argc, char** argv) {
                     std::cerr << "Authentication error" << std::endl;
                     return -2;
                 }
+                //throw std::logic_error("Exception test");
                 switch(path.second) {
                     case Status::FileCreated:
                         log(TRACE, "File created: " + path.first);
@@ -162,7 +188,10 @@ int main(int argc, char** argv) {
                         break;
                 }
             } catch (std::exception& e){
-                std::cout << e.what() << std::endl;
+                fw.stop();
+                t1.join();
+                log(ERROR, e.what());
+                exit(200);
             }
         }
     }
