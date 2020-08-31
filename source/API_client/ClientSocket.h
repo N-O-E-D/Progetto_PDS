@@ -6,9 +6,15 @@
 #include <boost/asio.hpp>
 #include "../../CryptoFunctions/CryptoExecutor.h"
 
+/**
+ * messageType models a request type message to server
+ */
 enum messageType{
     UPDATE,UPDATE_NAME,REMOVE,CREATE_FILE,CREATE_DIR,SYNC_DIR,SYNC_FILE,AUTH,AUTH_CHALLENGE
 };
+/**
+ * responsetype models a response type message from server
+ */
 enum responseType{
     OK,WRONG_USERNAME,WRONG_PASSWORD,CONNECTION_ERROR,UNDEFINED,CHALLENGE,INTERNAL_ERROR,NOT_PRESENT,OLD_VERSION, NON_AUTHENTICATED
 };
@@ -21,6 +27,7 @@ public:
     using TcpResolverIterator = TcpResolver::iterator;
     using TcpSocket = boost::asio::ip::tcp::socket;
 
+    /*+++++++++++++++++++++ Public method ++++++++++++++++++++++++++++*/
     ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpointIterator);
     void update(std::string const& path);
     void updateName(std::string const& path, std::string const& newName);
@@ -30,26 +37,36 @@ public:
     void syncDir(std::string const& path);
     void syncFile(std::string const& path);
     responseType authenticate(std:: string const& username, std::string const& password);
+    /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 private:
-    void openFile(std::string const& t_path);
+    /*+++++++++++++++++++++ Private method ++++++++++++++++++++++++++++*/
+    /*###### Communication methods ######*/
     void doConnect();
-    void doReadFile();
-    template<class Buffer>
-    void writeHeader(Buffer& t_buffer);
-    template<class Buffer>
-    void writeFileContent(Buffer& t_buffer);
-    int computeDimChunk();
     void buildHeader(messageType mt);
     void waitResponse(messageType mt);
-    void processResponse(size_t t_bytesTransferred,messageType mt);
-    void analyzeResponse(std::string response,messageType mt);
     responseType waitChallenge();
     responseType doConnectSync();
     template<class Buffer>
     responseType writeSync(Buffer& t_buffer);
     responseType readUntilSync();
+    template<class Buffer>
+    void writeHeader(Buffer& t_buffer);
+    template<class Buffer>
+    void writeFileContent(Buffer& t_buffer);
     responseType genCryptoChallenge();
+
+    /*###### Analyze response message methods ######*/
+    void processResponse(size_t t_bytesTransferred,messageType mt);
+    void analyzeResponse(std::string response,messageType mt);
     responseType processResponseSync();
+
+    /*###### File manipulation methods ######*/
+    void openFile(std::string const& t_path);
+    void doReadFile();
+    int computeDimChunk();
+
+
+    /*++++++++++++++++++++++ Instance Variable +++++++++++++++++ */
     TcpResolver m_ioService;
     TcpSocket m_socket;
     TcpResolverIterator m_endpointIterator;

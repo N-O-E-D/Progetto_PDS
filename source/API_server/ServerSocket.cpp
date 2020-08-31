@@ -120,9 +120,9 @@ void Session::parseAndDecryptCryptoChallenge(){
     std::vector<unsigned char> cc_vect;
     cc_vect.resize(m_cryptoChallenge.size());
     iv_vect.resize(m_iv.size());
-    for (int i=0;i<m_iv.size();i++)
+    for (int i=0;i<(int)m_iv.size();i++)
         iv_vect[i]=(unsigned char) m_buf[i];
-    for (int i=m_iv.size();i<m_iv.size()+m_cryptoChallenge.size();i++)
+    for (int i=m_iv.size();i<(int)(m_iv.size()+m_cryptoChallenge.size());i++)
         cc_vect[i-m_iv.size()]=(unsigned char) m_buf[i];
 
     log(TRACE,"Ho letto iv: ",iv_vect);
@@ -153,7 +153,7 @@ void Session::parseAndDecryptCryptoChallenge(){
 void Session::genChallenge(){
     std::vector<unsigned char> challenge = genRandomBytes(LENGTHCHALLENGE);
     m_challenge.resize(challenge.size());
-    for (int i=0;i<challenge.size();i++)
+    for (int i=0;i<(int)challenge.size();i++)
         m_challenge[i]=(char)challenge[i];
 
     log(TRACE,"La challenge generata è : ",m_challenge);
@@ -240,11 +240,11 @@ void Session::manageMessage(std::string const& messageType){
         rt=m_server.syncFile(m_pathName,(unsigned char*) m_mdvalue.data(),(unsigned int)m_mdvalue.size());
 
     sendToClient(rt);
-    if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE")
-        if(m_receivedChunks<m_chunks)
-            readAsyncSome(computeDimChunk(),READ_FILE);
-        else m_receivedChunks=0;
-
+    if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
+        if (m_receivedChunks < m_chunks)
+            readAsyncSome(computeDimChunk(), READ_FILE);
+        else m_receivedChunks = 0;
+    }
 }
 /**
  * Session method's which builds the header and sends it to client
@@ -398,7 +398,7 @@ void log(logType lt,std::string const& message1,std::vector<unsigned char> const
 #endif
 }
 void drawStrToUnsChar(std::string const& s){
-    for (int i=0;i<s.size();i++)
+    for (int i=0;i<(int)s.size();i++)
         printf("%02x",(unsigned char)s[i]);
     printf("\n");
 }
@@ -410,7 +410,7 @@ void drawHeader(boost::asio::streambuf const& s){
     std::cout<<"FINE HEADER"<<std::endl;
 }
 void drawVectUnsChar(std::vector<unsigned char> const& v){
-    for (int i=0;i<v.size();i++)
+    for (int i=0;i<(int)v.size();i++)
         printf("%02x",v[i]);
     printf("\n");
 }

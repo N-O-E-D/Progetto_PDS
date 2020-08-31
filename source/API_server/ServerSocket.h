@@ -7,9 +7,13 @@
 #include <memory>
 #include <boost/asio.hpp>
 #include "../server/Server.h"
+/**
+ * functionType defines two different mode to use readAsyncUntil
+ */
 enum functionType{
     READ_FILE,DECRYPT_CRYPTO_CHALLENGE
 };
+
 class Session
         : public std::enable_shared_from_this<Session>
 {
@@ -24,19 +28,26 @@ public:
     }
 
 private:
+    /*++++++++++++++++ Private Method ++++++++++++++++++*/
+    /*###### Communication methods ######*/
     void readAsyncUntil();
     void readAsyncSome(int dim,functionType ft);
-    void processRead(size_t t_bytesTransferred);
-    void createFile();
-    void readData(std::istream &stream);
     void doReadFileContent(size_t t_bytesTransferred);
-    void handleError(std::string const& t_functionName, boost::system::error_code const& t_ec);
-    void manageMessage(std::string const& messageType);
     void sendToClient(responseType rt);
     void genChallenge();
     void waitCryptoChallenge();
+    /*###### Analyze message method ######*/
+    void processRead(size_t t_bytesTransferred);
+    void readData(std::istream &stream);
     void parseAndDecryptCryptoChallenge();
+    /*###### Error handling method ######*/
+    void handleError(std::string const& t_functionName, boost::system::error_code const& t_ec);
+    /*###### Server intercommunication method ######*/
+    void manageMessage(std::string const& messageType);
+    /*###### File manipulation methods ######*/
     int computeDimChunk();
+    void createFile();
+    /*++++++++++++++++++++ Instance Variables ++++++++++++++++++*/
     TcpSocket m_socket;
     std::shared_ptr<Session> self;
     std::vector<char> m_buf;

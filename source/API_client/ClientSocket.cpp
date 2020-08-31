@@ -3,12 +3,12 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/log/trivial.hpp>
 #include <unordered_map>
-
 #include "ClientSocket.h"
-//la lunghezza della challenge è definita ed è pari a LENGTHCHALLENGE
-#define LENGTHCHALLENGE 100
-#define DIM_CHUNK 32000
+
+#define LENGTHCHALLENGE 100 //challenge lenth
+#define DIM_CHUNK 32000   //the size of each file chunk
 #define DEBUG 1
+
 /**
  * ClientSocket constructor
  * @param t_ioService
@@ -187,6 +187,11 @@ responseType ClientSocket::processResponseSync(){
             return OK;
         case UNDEFINED :
             log(TRACE,"Undefined header!");
+            return CONNECTION_ERROR;
+        case CONNECTION_ERROR:
+            log(TRACE,"Connection Error!");
+            return CONNECTION_ERROR;
+        default:
             return CONNECTION_ERROR;
     }
 }
@@ -524,6 +529,8 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
                 case SYNC_DIR:
                     syncDir(m_path);
                     break;
+                default:
+                    break;
             }
             break;
         case NOT_PRESENT:
@@ -544,7 +551,10 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
         case NON_AUTHENTICATED:
             log(TRACE,"Server ha risposto con non authenticated.");
             break;
+        default:
+            break;
     }
+
 
 }
 
@@ -603,19 +613,19 @@ void log(logType lt,std::string const& message, boost::asio::streambuf const& s)
 #endif
 }
 void drawVectUnsChar(std::vector<unsigned char> const& v){
-    for (int i=0;i<v.size();i++)
+    for (int i=0;i<(int)v.size();i++)
         printf("%02x",v[i]);
     printf("\n");
 }
 void drawStrToUnsChar(std::string const& s){
-    for (int i=0;i<s.size();i++)
+    for (int i=0;i<(int)s.size();i++)
         printf("%02x",(unsigned char)s[i]);
     printf("\n");
 }
 std::string vectUnsCharToStr(std::vector<unsigned char> const& v){
     std::string result;
     result.resize(v.size());
-    for(int i=0;i<v.size();i++)
+    for(int i=0;i<(int)v.size();i++)
         result[i]=(char) v[i];
     return result;
 }
