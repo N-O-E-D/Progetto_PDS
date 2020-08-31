@@ -40,7 +40,26 @@ void fileSystemWatcher(const std::string& root) {
         pathSyncStatus.setNotSynced(path_to_watch);
     });
 }
+void initScreen(){
+    std::cout << R"(
+ _____________________________________________________________________________
+ |                                                                           |
+ |   ______                     _        ______            _                 |
+ |   | ___ \                   | |       | ___ \          | |                |
+ |   | |_/ /___ _ __ ___   ___ | |_ ___  | |_/ / __ _  ___| | ___   _ _ __   |
+ |   |    // _ \ '_ ` _ \ / _ \| __/ _ \ | ___ \/ _` |/ __| |/ / | | | '_ \  |
+ |   | |\ \  __/ | | | | | (_) | ||  __/ | |_/ / (_| | (__|   <| |_| | |_) | |
+ |   \_| \_\___|_| |_| |_|\___/ \__\___| \____/ \__,_|\___|_|\_\\__,_| .__/  |
+ |                                                                   | |     |
+ |                                                                   |_|     |
+ |                                                                           |
+ |                                                                           |
+ |   Developed by Lorenzo Ceccarelli, Giandonato Farina, Bruno Accogli       |
+ |___________________________________________________________________________|
 
+
+)" << "\n\n\n";
+}
 // program receive parameters as arguments
 // program folder address port [time]
 int main(int argc, char** argv) {
@@ -54,7 +73,7 @@ int main(int argc, char** argv) {
     auto port = std::string(argv[3]);
     // 0.2 Initialization
     pathSyncStatus.setRoot(root);
-
+    initScreen(); //modified by Lorenzo
     // 1. Start File System Watcher
     std::thread t1{fileSystemWatcher, root};
 
