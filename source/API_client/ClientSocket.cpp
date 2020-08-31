@@ -495,8 +495,15 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
             if (m_messageType==CREATE_FILE || m_messageType==UPDATE) {
                 log(TRACE,"I chunks inviati sono : "+std::to_string(m_sendChunks));
                 if (m_sendChunks < m_chunks) {
-                    doReadFile();
-                    waitResponse(mt);
+                    if(m_fileSize!=0) {
+                        doReadFile();
+                        waitResponse(mt);
+                    }
+                    else {
+                        log(TRACE,"Intero file inviato correttamente.");
+                        m_sendChunks = 0;
+                        m_sourceFile.close();
+                    }
                 }
                 else {
                     log(TRACE,"Intero file inviato correttamente.");
