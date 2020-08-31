@@ -290,7 +290,7 @@ void Session::sendToClient(responseType rt){
                              {
 
                                 log(TRACE,"Messaggio di risposta inviato.");
-                                if(rt==OLD_VERSION || rt==NOT_PRESENT){
+                                if((rt==OLD_VERSION || rt==NOT_PRESENT) ){
                                     log(TRACE,"Aspetto che il client mi invii il file...");
                                     readAsyncUntil();
                                 }
