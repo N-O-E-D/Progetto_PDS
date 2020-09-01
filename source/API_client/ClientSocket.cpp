@@ -25,9 +25,8 @@ ClientSocket::ClientSocket(IoService& t_ioService, TcpResolverIterator t_endpoin
  * @param password
  * @return responseType object
  */
-responseType ClientSocket::authenticate(std:: string const& username, std::string const& password){
-    m_password=password;
-    m_username=username;
+responseType ClientSocket::authenticate(){
+
     m_messageType=AUTH;
     buildHeader(AUTH);
     responseType rt;
@@ -216,6 +215,20 @@ void ClientSocket::openFile(std::string const& t_path)
 
 }
 /**
+ * ClientSocket's method which permits to modify the password
+ * @param cost
+ */
+void ClientSocket::setPassword(std::string const& password){
+    m_password=password;
+}
+/**
+ ClientSocket's method which permits to modify the username
+ * @param username
+ */
+void ClientSocket::setUsername(std::string const& username){
+    m_username=username;
+}
+/**
  * ClientSocket's method which starts an asynchronous (non-blocking) connection
  */
 void ClientSocket::doConnect()
@@ -319,6 +332,11 @@ void ClientSocket::buildHeader(messageType mt){
  * @param action
  */
 void ClientSocket::update(const std::string &path) {
+    responseType rt=authenticate();
+    if(rt==WRONG_USERNAME)
+        throw WrongUsernameException();
+    if(rt==WRONG_PASSWORD)
+        throw WrongPasswordException();
     m_path=path;
     m_messageType=UPDATE;
     openFile(m_path);
@@ -335,6 +353,11 @@ void ClientSocket::update(const std::string &path) {
  * @param action
  */
 void ClientSocket::updateName(const std::string &path,std::string const& newName) {
+    responseType rt=authenticate();
+    if(rt==WRONG_USERNAME)
+        throw WrongUsernameException();
+    if(rt==WRONG_PASSWORD)
+        throw WrongPasswordException();
     m_path=path;
     m_messageType=UPDATE_NAME;
     m_newName=newName;
@@ -349,6 +372,11 @@ void ClientSocket::updateName(const std::string &path,std::string const& newName
  * @param action
  */
 void ClientSocket::remove(const std::string &path) {
+    responseType rt=authenticate();
+    if(rt==WRONG_USERNAME)
+        throw WrongUsernameException();
+    if(rt==WRONG_PASSWORD)
+        throw WrongPasswordException();
     m_path=path;
     m_messageType=REMOVE;
     buildHeader(REMOVE);
@@ -362,6 +390,11 @@ void ClientSocket::remove(const std::string &path) {
  * @param action
  */
 void ClientSocket::createFile(const std::string &path) {
+    responseType rt=authenticate();
+    if(rt==WRONG_USERNAME)
+        throw WrongUsernameException();
+    if(rt==WRONG_PASSWORD)
+        throw WrongPasswordException();
     m_path=path;
     m_messageType=CREATE_FILE;
     openFile(m_path);
@@ -377,6 +410,11 @@ void ClientSocket::createFile(const std::string &path) {
  * @param action
  */
 void ClientSocket::createDir(const std::string &path) {
+    responseType rt=authenticate();
+    if(rt==WRONG_USERNAME)
+        throw WrongUsernameException();
+    if(rt==WRONG_PASSWORD)
+        throw WrongPasswordException();
     m_path=path;
     m_messageType=CREATE_DIR;
     buildHeader(CREATE_DIR);
@@ -390,6 +428,11 @@ void ClientSocket::createDir(const std::string &path) {
  * @param action
  */
 void ClientSocket::syncDir(std::string const& path){
+    responseType rt=authenticate();
+    if(rt==WRONG_USERNAME)
+        throw WrongUsernameException();
+    if(rt==WRONG_PASSWORD)
+        throw WrongPasswordException();
     m_path=path;
     m_messageType=SYNC_DIR;
     buildHeader(SYNC_DIR);
@@ -403,11 +446,16 @@ void ClientSocket::syncDir(std::string const& path){
  * @param action
  */
 void ClientSocket::syncFile(std::string const& path){
+    responseType rt=authenticate();
+    if(rt==WRONG_USERNAME)
+        throw WrongUsernameException();
+    if(rt==WRONG_PASSWORD)
+        throw WrongPasswordException();
     m_path=path;
     m_messageType=SYNC_FILE;
-
     // Compute hash
     unsigned char md_value[EVP_MAX_MD_SIZE];
+    log(TRACE,"Sync file");
     unsigned int md_len=computeHash(path, md_value);
 
     m_mdlen=md_len;

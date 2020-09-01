@@ -118,6 +118,8 @@ int main(int argc, char** argv) {
     std::cin >> username;
     std::cout << "Please insert password: ";
     std::cin >> password;
+    socket.setUsername(username);
+    socket.setPassword(password);
     // 3.2 Call authentication method
     /*if(socket.authenticate(username, password) != responseType::OK) {
         std::cerr << "Authentication error" << std::endl;
@@ -134,19 +136,21 @@ int main(int argc, char** argv) {
                 // 5.1.1 If already synced return
                 if (path.second == SyncStatus::Synced) return;
 
-                /* PROVISIONALLY: do authentication */
-                if (socket.authenticate(username, password) != responseType::OK) {
+                /*PROVISIONALLY: do authentication */
+                /*if (socket.authenticate(username, password) != responseType::OK) {
                     std::cerr << "Authentication error" << std::endl;
                     exit(255);
-                }
+                }*/
 
                 std::cout << "Trying to sync " << path.first << "\n";
 
                 // 5.1.2 If not synced, do it
                 if (std::filesystem::is_directory(std::filesystem::path(path.first)))
                     socket.syncDir(path.first);
-                else
+                else {
+                    log(TRACE,"Iterate map sync file");
                     socket.syncFile(path.first);
+                }
                 runHandlers(ioService);
                 // 5.1.3 Set synced in the map
                 pathSyncStatus.setSynced(path.first);
@@ -157,10 +161,10 @@ int main(int argc, char** argv) {
         // 5.2 If queue is not empty, process one entry
         if(path_to_process.pop(path)){
             /* PROVISIONALLY: do authentication */
-            if(socket.authenticate(username, password) != responseType::OK) {
+            /*if(socket.authenticate(username, password) != responseType::OK) {
                 std::cerr << "Authentication error" << std::endl;
                 return -2;
-            }
+            }*/
             try{
                 // 5.2.1 Send the corresponding message and update map
 //                // 3.2 Call authentication method
@@ -195,7 +199,20 @@ int main(int argc, char** argv) {
                         pathSyncStatus.setSynced(path.first);
                         break;
                 }
-            } catch (std::exception& e){
+            }
+            catch (WrongUsernameException& e){
+                fw.stop();
+                t1.join();
+                log(ERROR,e.what());
+                exit(200);
+            }
+            catch(WrongPasswordException& e){
+                fw.stop();
+                t1.join();
+                log(ERROR,e.what());
+                exit(200);
+            }
+            catch (std::exception& e){
                 fw.stop();
                 t1.join();
                 log(ERROR, e.what());

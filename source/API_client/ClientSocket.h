@@ -5,7 +5,7 @@
 #include <map>
 #include <boost/asio.hpp>
 #include "../../CryptoFunctions/CryptoExecutor.h"
-
+#include <exception>
 /**
  * messageType models a request type message to server
  */
@@ -36,7 +36,9 @@ public:
     void createDir(std::string const& path);
     void syncDir(std::string const& path);
     void syncFile(std::string const& path);
-    responseType authenticate(std:: string const& username, std::string const& password);
+    void setUsername(std::string const& username);
+    void setPassword(std::string const& password);
+
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 private:
     /*+++++++++++++++++++++ Private method ++++++++++++++++++++++++++++*/
@@ -54,6 +56,7 @@ private:
     template<class Buffer>
     void writeFileContent(Buffer& t_buffer);
     responseType genCryptoChallenge();
+    responseType authenticate();
 
     /*###### Analyze response message methods ######*/
     void processResponse(size_t t_bytesTransferred,messageType mt);
@@ -89,7 +92,14 @@ private:
     int m_fileSize;
 
 };
-
+class WrongUsernameException : public std::exception{
+public:
+    const char* what () const throw () {return "Wrong username";}
+};
+class WrongPasswordException : public std::exception{
+public:
+    const char* what () const throw () {return "Wrong password";}
+};
 enum logType{
     ERROR,TRACE
 };
