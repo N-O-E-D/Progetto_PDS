@@ -14,6 +14,7 @@ enum class SyncStatus { Synced, NotSynced };
 class PathStatusMap {
 private:
     std::map<std::string, SyncStatus> map;
+    bool toSync = true;
     std::mutex m;
 public:
     void setRoot(const std::string& root_path){
@@ -52,13 +53,28 @@ public:
         map[key] = SyncStatus::NotSynced;
     }
 
-    bool isSynced() {
+//    bool isSynced() {
+//        std::unique_lock ul (m);
+//        for(auto& it : map) {
+//            if (it.second == SyncStatus::NotSynced)
+//                return false;
+//        }
+//        return true;
+//    }
+
+    bool isToSync(){
         std::unique_lock ul (m);
-        for(auto& it : map) {
-            if (it.second == SyncStatus::NotSynced)
-                return false;
-        }
-        return true;
+        return toSync;
+    }
+
+    void setToSync(){
+        std::unique_lock ul (m);
+        toSync = true;
+    }
+
+    void setNotToSync(){
+        std::unique_lock ul (m);
+        toSync = false;
     }
 
     void print() {

@@ -18,28 +18,29 @@ void runHandlers(boost::asio::io_service& ioService){
     ioService.reset();
 }
 
-void fileSystemWatcher(const std::string& root) {
-    // Create a FileWatcher instance that will check the current folder for changes every 5 seconds
-    FileSystemWatcher fw{root, std::chrono::milliseconds(5000)};
-    // Start monitoring a folder for changes and (in case of changes)
-    // run a user provided lambda function
-    fw.start([] (const std::string& path_to_watch, Status status) -> void {
-        // Process only regular files or directories
-        if( !(std::filesystem::is_regular_file(std::filesystem::path(path_to_watch))
-              || std::filesystem::is_directory(std::filesystem::path(path_to_watch)))
-            && status != Status::Erased)
-            return;
-
-        // Inset the path into queue, if it is full enter the if
-        if(!path_to_process.push(make_pair(path_to_watch, status))){
-            // Remove the oldest element and push the new one
-            path_to_process.pop();
-            path_to_process.push(make_pair(path_to_watch, status));
-        }
-        // Set path as NotSynced
-        pathSyncStatus.setNotSynced(path_to_watch);
-    });
-}
+//void fileSystemWatcher(const std::string& root) {
+//    // Create a FileWatcher instance that will check the current folder for changes every 5 seconds
+//    FileSystemWatcher fw{root, std::chrono::milliseconds(5000)};
+//    // Start monitoring a folder for changes and (in case of changes)
+//    // run a user provided lambda function
+//    fw.start([] (const std::string& path_to_watch, Status status) -> void {
+//        // Process only regular files or directories
+//        if( !(std::filesystem::is_regular_file(std::filesystem::path(path_to_watch))
+//              || std::filesystem::is_directory(std::filesystem::path(path_to_watch)))
+//            && status != Status::Erased)
+//            return;
+//
+//        // Inset the path into queue, if it is full enter the if
+//        if(!path_to_process.push(make_pair(path_to_watch, status))){
+//            // Remove the oldest element and push the new one
+//            path_to_process.pop();
+//            path_to_process.push(make_pair(path_to_watch, status));
+//            pathSyncStatus.setToSync();
+//        }
+//        // Set path as NotSynced
+//        pathSyncStatus.setNotSynced(path_to_watch);
+//    });
+//}
 
 void fswHandler (FileSystemWatcher* fw){
     fw->start([] (const std::string& path_to_watch, Status status) -> void {
@@ -54,6 +55,7 @@ void fswHandler (FileSystemWatcher* fw){
             // Remove the oldest element and push the new one
             path_to_process.pop();
             path_to_process.push(make_pair(path_to_watch, status));
+            pathSyncStatus.setToSync();
         }
         // Set path as NotSynced
         pathSyncStatus.setNotSynced(path_to_watch);
@@ -126,19 +128,22 @@ int main(int argc, char** argv) {
     std::pair<std::string, Status> path;
     while(true){
         // 5.1 Synchronization
-        if(!pathSyncStatus.isSynced())
-            pathSyncStatus.iterate_map([&socket,&ioService,&username,&password] (const std::pair<std::string,SyncStatus>& path) -> void {
+        if(pathSyncStatus.isToSync()) {
+            pathSyncStatus.iterate_map([&socket, &ioService, &username, &password](
+                    const std::pair<std::string, SyncStatus> &path) -> void {
                 // 5.1.1 If already synced return
-                if( path.second == SyncStatus::Synced ) return;
+                if (path.second == SyncStatus::Synced) return;
 
                 /* PROVISIONALLY: do authentication */
-                if(socket.authenticate(username, password) != responseType::OK) {
+                if (socket.authenticate(username, password) != responseType::OK) {
                     std::cerr << "Authentication error" << std::endl;
                     exit(255);
                 }
 
+                std::cout << "Trying to sync " << path.first << "\n";
+
                 // 5.1.2 If not synced, do it
-                if( std::filesystem::is_directory(std::filesystem::path(path.first)) )
+                if (std::filesystem::is_directory(std::filesystem::path(path.first)))
                     socket.syncDir(path.first);
                 else
                     socket.syncFile(path.first);
@@ -146,6 +151,9 @@ int main(int argc, char** argv) {
                 // 5.1.3 Set synced in the map
                 pathSyncStatus.setSynced(path.first);
             });
+            // 5.2 When all is synced unflag
+            pathSyncStatus.setNotToSync();
+        }
         // 5.2 If queue is not empty, process one entry
         if(path_to_process.pop(path)){
             /* PROVISIONALLY: do authentication */
@@ -155,11 +163,11 @@ int main(int argc, char** argv) {
             }
             try{
                 // 5.2.1 Send the corresponding message and update map
-                // 3.2 Call authentication method
-                if(socket.authenticate(username, password) != responseType::OK) {
-                    std::cerr << "Authentication error" << std::endl;
-                    return -2;
-                }
+//                // 3.2 Call authentication method
+//                if(socket.authenticate(username, password) != responseType::OK) {
+//                    std::cerr << "Authentication error" << std::endl;
+//                    return -2;
+//                }
                 //throw std::logic_error("Exception test");
                 switch(path.second) {
                     case Status::FileCreated:
