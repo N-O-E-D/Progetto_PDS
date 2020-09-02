@@ -1,42 +1,21 @@
 # Client
-### Istruzioni per l'uso
-* La cartella contiene solo il CMakeList.txt, quindi prima di cominciare ricarare il cmake (tasto destro -> Reload Cmake Project).
-* Nel main ho scritto due test per controllare che Boost e OpenSSL funzionino.   
+
+### How client works
+
+#### ARCHITECTURE
+* It receives three arguments: the path to back up, the IP and port of the backup server;
+* Client has two threads, one acts as producer and the other as consumer;
+* The communication between producer and consumer is managed by a thread-safe queue provided by the Boost library;
+* In addition, there is a thread-safe map that is used for another purpose.
 
 #### PRODUCER
-* Esegue File System Watcher che aggiunge le modifiche all'interno della coda;
-* All'inizializzazione, contatta il server per sapere quali file sono sincronizzati;
-* Di default non sincronizzati => quando riesco a contattare il server inserisco nella codae l'aggiunta/modifica dei file non ancora sincronizzati
+* The producer consists in a file system watcher that notices all the changes in the path provided by the user;
+* If a notable change is noted, the producer puts it into the queue;
+* If the queue is full, it removes the oldest entry from the queue, puts the new one and set the map as to sync;
+* The producer can be stopped using an appropriate method. 
 
 #### CONSUMER
-* Crea una comunicazione con il server e appena la apre manda il comando di sincronizzazione;
-* Processa le entry nella coda con la modifica corrispondente.
-* La entry va eliminata dalla coda solo in caso di successo.
+* First of all, it syncs the map if it is set as to be synced;
+* Then if there is an entry in the queue, the consumer processes it sending to the server the message corresponding to the change in the file system;
+* If there are any exceptions, they are caught: some has dedicated handlers, others the general one.
 
-#### IMPLEMENTAZIONE
-* Classe con parametri:
-    * std::string path;
-    * Status pathStatus;
-* Coda thread safe che possa specializzarsi in questa classe;
-* Aggiunta dello stato di sincronizzazione all'interno della mappa del FSW;
-
-Coda thread safe => boost::lockfree::spsc_queue (grandezza limitata);
-
-Classe => std::pair<std::string, Status>;
-
-#####MAIN:
-1. Avviare File System Watcher (producer);
-2. Sincornizzazione;
-5. Consumer;
-6. Gestione terminazione?
-
-Mappa thread safe per salvare i dati della sincronizzazione.
-
-### class PathStatusMap
-Thread Safe class wrapping a map that contains path as key and sync status as value.
-Constructor receive the root path and populates the map with all the sub paths, with the default value NotSynced
-
-### TODO
-* autenticazione -> riprovare/fermare il programma in caso di fallimento
-* gestione degli errori
-* sistemazione del codice 
