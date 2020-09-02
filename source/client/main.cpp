@@ -67,8 +67,6 @@ void initScreen(){
  |                                                                           |
  |   Developed by Lorenzo Ceccarelli, Giandonato Farina, Bruno Accogli       |
  |___________________________________________________________________________|
-
-
     )" << "\n\n";
 }
 
@@ -115,9 +113,10 @@ int main(int argc, char** argv) {
     socket.setPassword(password);
 
     // 5. Main process
-    try{
-        std::pair<std::string, Status> path;
-        while(true){
+
+    std::pair<std::string, Status> path;
+    while(true){
+        try{
             // 5.1 Synchronization
             if(pathSyncStatus.isToSync()) {
                 pathSyncStatus.iterate_map([&socket, &ioService](const std::pair<std::string, SyncStatus> &path) -> void {
@@ -168,45 +167,45 @@ int main(int argc, char** argv) {
                 }
             }
         }
-    }
-    // 6. Exceptions handling
-    // 5.1 Wrong username
-    catch (WrongUsernameException& e){
-        if(attempts++ <= MAX_ATTEMPTS){
-            // retry
-            std::cout << "Invalid username. " << MAX_ATTEMPTS-attempts << " attempts remaining.\nPlease re-insert username: ";
-            std::cin >> username;
-            socket.setUsername(username);
-        } else {
+        // 6. Exceptions handling
+        // 5.1 Wrong username
+        catch (WrongUsernameException& e){
+            if(attempts++ < MAX_ATTEMPTS){
+                // retry
+                std::cout << "Invalid username. " << MAX_ATTEMPTS-attempts+1 << " attempts remaining.\nPlease re-insert username: ";
+                std::cin >> username;
+                socket.setUsername(username);
+            } else {
+                // stop
+                fw.stop();
+                log(ERROR,"Wrong username. No attempts remaining. Terminating program");
+                t1.join();
+                exit(201); // 201 => Wrong username
+            }
+        }
+        // 5.2 Wrong password
+        catch(WrongPasswordException& e){
+            if(attempts++ < MAX_ATTEMPTS){
+                // retry
+                std::cout << "Invalid password. " << MAX_ATTEMPTS-attempts+1 << " attempts remaining.\nPlease re-insert password: ";
+                std::cin >> password;
+                socket.setPassword(password);
+            } else {
+                // stop
+                fw.stop();
+                log(ERROR,"Wrong password. No attempts remaining. Terminating program");
+                t1.join();
+                exit(202); // 202 => Wrong password
+            }
+        }
+        // 5.3 Generic exception
+        catch (std::exception& e){
             // stop
             fw.stop();
+            log(ERROR, e.what());
             t1.join();
-            log(ERROR,"Wrong username. No attempts remaining. Terminating program");
-            exit(201); // 201 => Wrong username
+            exit(200); // 200 => generic error
         }
-    }
-    // 5.2 Wrong password
-    catch(WrongPasswordException& e){
-        if(attempts++ <= MAX_ATTEMPTS){
-            // retry
-            std::cout << "Invalid password. " << MAX_ATTEMPTS-attempts << " attempts remaining.\nPlease re-insert password: ";
-            std::cin >> password;
-            socket.setPassword(password);
-        } else {
-            // stop
-            fw.stop();
-            t1.join();
-            log(ERROR,"Wrong password. No attempts remaining. Terminating program");
-            exit(202); // 202 => Wrong password
-        }
-    }
-    // 5.3 Generic exception
-    catch (std::exception& e){
-        // stop
-        fw.stop();
-        t1.join();
-        log(ERROR, e.what());
-        exit(200); // 200 => generic error
     }
 }
 
