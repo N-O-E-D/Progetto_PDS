@@ -4,7 +4,7 @@ project(client)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS -pthread)
 
-add_executable(client main.cpp ../API_client/ClientSocket.cpp ../API_client/ClientSocket.h FileSystemWatcher.h FileSystemWatcher.cpp PathStatusMap.h ../../CryptoFunctions/CryptoExecutor.cpp ../../CryptoFunctions/CryptoExecutor.h)
+add_executable(client main.cpp ./API_client/ClientSocket.cpp ./API_client/ClientSocket.h FileSystemWatcher.h FileSystemWatcher.cpp PathStatusMap.h ../../CryptoFunctions/CryptoExecutor.cpp ../../CryptoFunctions/CryptoExecutor.h)
 
 # OpenSSL Libraries
 if (APPLE)

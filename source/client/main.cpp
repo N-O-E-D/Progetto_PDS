@@ -8,7 +8,7 @@
 
 #include "FileSystemWatcher.h"
 #include "PathStatusMap.h"
-#include "../API_client/ClientSocket.h"
+#include "./API_client/ClientSocket.h"
 
 boost::lockfree::spsc_queue< std::pair<std::string,Status> > path_to_process(1024);
 PathStatusMap pathSyncStatus;
