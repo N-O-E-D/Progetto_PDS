@@ -123,12 +123,12 @@ int main(int argc, char** argv) {
                     // 5.1.1 If already synced return
                     if (path.second == SyncStatus::Synced) return;
                     // 5.1.2 If not synced, do it
+                    log(TRACE,"Trying to sync : "+ path.first);
                     if (std::filesystem::is_directory(std::filesystem::path(path.first)))
                         socket.syncDir(path.first);
-                    else {
-                        log(TRACE,"Iterate map sync file");
+                    else
                         socket.syncFile(path.first);
-                    }
+
                     runHandlers(ioService);
                     // 5.1.3 Set synced in the map
                     pathSyncStatus.setSynced(path.first);

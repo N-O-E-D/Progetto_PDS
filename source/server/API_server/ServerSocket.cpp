@@ -342,7 +342,7 @@ void ServerSocket::doAccept()
                                 doAccept();
                             });
 }
-
+/*
 void log(logType lt,std::string const& message){
 #if DEBUG
     switch(lt){
@@ -414,3 +414,4 @@ void drawVectUnsChar(std::vector<unsigned char> const& v){
         printf("%02x",v[i]);
     printf("\n");
 }
+*/

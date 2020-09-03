@@ -101,7 +101,7 @@ class WrongPasswordException : public std::exception{
 public:
     const char* what () const throw () {return "Wrong password";}
 };
-enum logType{
+/*enum logType{
     ERROR,TRACE
 };
 void log(logType lt,std::string const& message);
@@ -111,5 +111,5 @@ void log(logType lt,std::string const& message,boost::asio::streambuf const& s);
 void drawVectUnsChar(std::vector<unsigned char> const& v);
 void drawStrToUnsChar(std::string const& s);
 void drawHeader(boost::asio::streambuf const& s);
-std::string vectUnsCharToStr(std::vector<unsigned char> const& v);
+std::string vectUnsCharToStr(std::vector<unsigned char> const& v);*/
 responseType stringToEnum(std::string const& s);

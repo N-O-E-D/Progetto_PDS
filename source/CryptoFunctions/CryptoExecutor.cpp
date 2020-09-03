@@ -10,6 +10,8 @@
 #define BUF_SIZE 1024
 #define KEYLEN 32
 #define MAX_BUF 2048
+#define DEBUG 0
+#define DEPLOY 1
 
 void handleErrors(void)
 {
@@ -27,7 +29,7 @@ unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
     FILE *fin;
 
     if((fin = fopen(path.data(),"r")) == NULL) {
-        std::cout<<"Couldnt open input file, try again\n";
+        log(ERROR,"Couldnt open input file, try again");
         exit(1);
     }
 
@@ -38,13 +40,14 @@ unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
         EVP_DigestUpdate(md, buf,n);
 
     if(EVP_DigestFinal_ex(md, md_value, &md_len) != 1) {
-        printf("Digest computation problem\n");
+        log(ERROR,"Digest computation problem");
         exit(1);
     }
-    printf("The digest is: ");
+    /*printf("The digest is: ");
     for(i = 0; i < md_len; i++)
         printf("%02x", md_value[i]);
-    printf("\n");
+    printf("\n");*/
+    log(TRACE,"The digest is: ",std::string(md_value,md_value+md_len));
     EVP_MD_CTX_free(md);
     return md_len;
 }
@@ -62,22 +65,23 @@ std::vector<unsigned char> HKDF(std::string const& password,std::vector<unsigned
     std::vector<unsigned char> result;
     result.resize(KEYLEN);
     if (EVP_PKEY_derive_init(pctx) <= 0)
-        printf("Error during EVP_PKEY_derive_init\n");
+        log(ERROR,"Error during EVP_PKEY_derive_init");
         if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256()) <= 0)
-            printf("Error during EVP_PKEY_derive_init\n");
+            log(ERROR,"Error during EVP_PKEY_derive_init");
             if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) <= 0)
-                printf("Error during EVP_PKEY_CTX_set1_hkdf_salt\n");
+                log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_salt");
                 if (EVP_PKEY_CTX_set1_hkdf_key(pctx, password.data(), password.size()) <= 0)
-                    printf("Error during EVP_PKEY_CTX_set1_hkdf_key\n");
+                    log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_key");
                     if (EVP_PKEY_derive(pctx, out, &outlen) <= 0)
-                            printf("Error during EVP_PKEY_derive\n");
+                            log(ERROR,"Error during EVP_PKEY_derive");
 
-    printf("La chiave è :\n");
+    /*printf("La chiave è :\n");
     for (int i=0;i<KEYLEN;i++)
         result[i]=out[i];
     for (int i=0;i<KEYLEN;i++)
         printf("%02x",result[i]);
-    printf("\n");
+    printf("\n");*/
+    log(TRACE,"La chiave è : ",result);
     return result;
 }
 
@@ -87,7 +91,7 @@ std::vector<unsigned char> genRandomBytes(int bytes){
     std::vector<unsigned char> result;
     result.resize(bytes);
     if(bytes>MAX_BUF){
-        printf("Maximum size allowed exxeced. Set to %d\n",MAX_BUF);
+        log(ERROR,"Maximum size allowed execed. Set to "+std::to_string(MAX_BUF));
         bytes=MAX_BUF;
     }
 
@@ -109,12 +113,10 @@ std::vector<unsigned char> encrypt(std::string & message,std::vector<unsigned ch
     unsigned char ciphertext[MAX_BUF];
     std::vector<unsigned char> result;
     std::string padding;
-    std::cout<<message.size()<<std::endl;
     padding.resize(28);
     for (int i=0;i<padding.size();i++)
         padding[i]=0;
     message+=padding;
-    std::cout<<message.size()<<std::endl;
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
@@ -145,13 +147,14 @@ std::vector<unsigned char> encrypt(std::string & message,std::vector<unsigned ch
 
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
-    printf("the ciphertext is:\n");
+    //printf("the ciphertext is:\n");
     result.resize(ciphertext_len);
     for (int i=0;i<ciphertext_len;i++)
         result[i]=ciphertext[i];
-    for (int i=0;i<result.size();i++)
+    /*for (int i=0;i<result.size();i++)
         printf("%02x",result[i]);
-    printf("\n");
+    printf("\n");*/
+    log(TRACE,"The ciphertext is : ",result);
     return result;
 }
 std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,std::vector<unsigned char> iv,std::vector<unsigned char> key){
@@ -194,13 +197,100 @@ std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,
 
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
-    printf("the plaintext length is: %d\n",plaintext_len-28);
-    printf("the plaintext is:\n");
     result.resize(plaintext_len-28);
     for (int i=0;i<plaintext_len-28;i++)
         result[i]=plaintext[i];
-    for (int i=0;i<result.size();i++)
+    log(TRACE,"the plaintext is : ",result);
+    /*for (int i=0;i<result.size();i++)
         printf("%02x",result[i]);
-    printf("\n");
+    printf("\n");*/
     return result;
+}
+
+void log(logType lt,std::string const& message){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message;
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message;
+            break;
+    }
+#elif DEPLOY
+    switch(lt){
+        case ERROR:
+            std::cout<< "[ ERROR ] "+message<<std::endl;
+            break;
+        case TRACE:
+            std::cout<<  "[ OK ] "+message<<std::endl;
+            break;
+    }
+#endif
+}
+void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message1;
+            drawVectUnsChar(message2);
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message1;
+            drawVectUnsChar(message2);
+            break;
+    }
+#endif
+}
+void log(logType lt,std::string const& message1,std::string const& message2){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message1;
+            drawStrToUnsChar(message2);
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message1;
+            drawStrToUnsChar(message2);
+            break;
+    }
+#endif
+}
+void log(logType lt,std::string const& message, boost::asio::streambuf const& s){
+#if DEBUG
+    switch(lt){
+        case ERROR:
+            BOOST_LOG_TRIVIAL(error) << message;
+            drawHeader(s);
+            break;
+        case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message;
+            drawHeader(s);
+            break;
+    }
+#endif
+}
+void drawVectUnsChar(std::vector<unsigned char> const& v){
+    for (int i=0;i<(int)v.size();i++)
+        printf("%02x",v[i]);
+    printf("\n");
+}
+void drawStrToUnsChar(std::string const& s){
+    for (int i=0;i<(int)s.size();i++)
+        printf("%02x",(unsigned char)s[i]);
+    printf("\n");
+}
+std::string vectUnsCharToStr(std::vector<unsigned char> const& v){
+    std::string result;
+    result.resize(v.size());
+    for(int i=0;i<(int)v.size();i++)
+        result[i]=(char) v[i];
+    return result;
+}
+void drawHeader(boost::asio::streambuf const& s){
+    auto bufs=s.data();
+    std::cout<<"dimensione header : "<<s.size()<<std::endl;
+    std::cout<<"HEADER"<<std::endl;
+    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+s.size());
+    std::cout<<"FINE HEADER"<<std::endl;
 }

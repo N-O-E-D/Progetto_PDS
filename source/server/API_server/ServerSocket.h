@@ -88,6 +88,7 @@ private:
     Server m_server;
 
 };
+/*
 enum logType{
     ERROR,TRACE
 };
@@ -97,4 +98,4 @@ void log(logType lt,std::string const& message1,std::string const& message2);
 void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2);
 void drawHeader(boost::asio::streambuf const& s);
 void drawStrToUnsChar(std::string const& s);
-void drawVectUnsChar(std::vector<unsigned char> const& v);
+void drawVectUnsChar(std::vector<unsigned char> const& v);*/
