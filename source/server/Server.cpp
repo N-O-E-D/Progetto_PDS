@@ -49,6 +49,7 @@ responseType Server::update(std::string const& path, const std::vector<char>& re
 
     std::cout<<"UPDATE"<<std::endl;
 
+    boost::system::error_code ec;
     auto userPath = userDirectory / pathManipulation(path);
 
     if(!boost::filesystem::exists(userPath)){
@@ -58,7 +59,10 @@ responseType Server::update(std::string const& path, const std::vector<char>& re
 
     //crea un file con nome uguale (ma con minima differenza per non rimpiazzare l'originale)
     std::string tmpname(userPath.string()+"tmp");
-    std::ofstream recfile(tmpname, std::ofstream::binary | std::ofstream::app);
+    std::ofstream recfile;
+    recfile.exceptions(std::ios_base::failbit | std::ios_base::badbit);  //tells the file to throw an exeption if those bit are set
+
+    recfile.open(tmpname, std::ofstream::binary | std::ofstream::app);
 
     if(recfile.is_open()){
         try{
@@ -66,19 +70,24 @@ responseType Server::update(std::string const& path, const std::vector<char>& re
         }
         catch(std::exception& e){  //in caso di errore
             std::cerr << "Write tmp file error: " << e.what() << std::endl;
-            remove(tmpname);  //rimuovi il file provvisorio
+            boost::filesystem::remove(tmpname,ec);  //rimuovi il file provvisorio
+            if(!ec)
+                return OK;
+            std::cout<<"Error removing tmp file"<<std::endl;
             return INTERNAL_ERROR;
         }
         std::cout<<"Write tmp file success!"<<std::endl;
         recfile.close();
+
         //in caso di successo rimuovi il file vecchio e rinomina il file temporaneo
-        boost::system::error_code ec;
         boost::filesystem::remove(userPath,ec);
         if(!ec){
             //updateName(tmpname,userPath.string());
-            rename(boost::filesystem::path(tmpname), userPath, ec);
+            boost::filesystem::rename(boost::filesystem::path(tmpname), userPath, ec);
             if(!ec)
                 return OK;
+            std::cout<<"Error renaming tmp file"<<std::endl;
+            return INTERNAL_ERROR;
         }
         std::cout<<"Error removing tmp file"<<std::endl;
         return INTERNAL_ERROR;
@@ -167,15 +176,22 @@ responseType Server::createFile(std::string const& path, const std::vector<char>
 
     auto userPath = userDirectory / pathManipulation(path);
 
-    std::ofstream recfile(userPath.string(), std::ofstream::binary | std::ofstream::app);
+    std::ofstream recfile;
+    recfile.exceptions(std::ios_base::failbit | std::ios_base::badbit);  //tells the file to throw an exeption if those bit are set
+
+    recfile.open(userPath.string(), std::ofstream::binary | std::ofstream::app);
 
     if(recfile.is_open()){
         try{
             recfile.write(recbuffer.data(),buffsize);
         }
         catch(std::exception& e){  //in caso di errore
+            boost::system::error_code ec;
             std::cerr << "Write file error: " << e.what() << std::endl;
-            remove(userPath.string());  //rimuovi il file provvisorio
+            boost::filesystem::remove(userPath,ec);  //rimuovi il file provvisorio
+            if(!ec)
+                return OK;
+            std::cout<<"Error removing tmp file"<<std::endl;
             return INTERNAL_ERROR;
         }
         std::cout<<"Write file success!"<<std::endl;
