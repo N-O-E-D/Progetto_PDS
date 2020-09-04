@@ -68,7 +68,7 @@ The possible headers are :
 - AUTH <username> 
 - AUTH_CHALLENGE <iv_size> <cipher_challenge_size>
 
-In addition the client send to server body messages concerning the following headers:
+In addition the client sends to server body messages concerning the following headers:
 - UPDATE and CREATE_FILE : the body messages contain file chunks  (the entire file is divided into one or more chuncks).
 - AUTH_CHALLENGE : the body message contains the iv and the cipher challenge.
 
