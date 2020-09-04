@@ -27,8 +27,15 @@ void handleSocket(int portnum){
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
+    //controllo parametri
+    if(argc<2){
+        std::cerr<<"Not enough parameters"<<std::endl;
+        return -1;
+    }
+    auto port = std::string(argv[1]);
+
     //Carica le credenziali in memoria
     const std::string filename("../credenziali.txt");
     if(loadUsers(filename)==INTERNAL_ERROR)
@@ -37,7 +44,7 @@ int main()
     //Setta la working directory del server
     boost::filesystem::current_path(workingdirectory);
 
-    handleSocket(5000);
+    handleSocket(stoi(port));
 
     return 0;
 }

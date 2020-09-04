@@ -10,7 +10,6 @@ enum responseType{
 };
 
 #include "../CryptoFunctions/CryptoExecutor.h"
-#include "CookieMap.h"
 #include "openssl/bn.h"
 #include <shared_mutex>
 #include <iostream>

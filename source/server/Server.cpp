@@ -326,9 +326,3 @@ responseType Server::UserToPassword(const std::string& username, std::string& pa
         return WRONG_USERNAME;
     }
 }
-
-
-
-/* ***** COOKIES ***** */
-
-static CookieMap cookiemap;
