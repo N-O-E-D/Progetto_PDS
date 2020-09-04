@@ -52,6 +52,40 @@ where Folder_To_Track is a path.
   cd server
   ./server
   ```
-  
-  
- 
+## Description
+### Communication API
+#### Client Side
+Client builds a specific header to notify the server about the modifications detected by FileSystemWatcher.
+
+The possible headers are : 
+- UPDATE <path> <file_size> 
+- UPDATE_NAME <path> <new_name>
+- REMOVE <path>
+- CREATE_FILE <path> <fileSize>
+- CREATE_DIR <path>
+- SYNC_DIR <path>
+- SYNC_FILE <path> <hash_value>
+- AUTH <username> 
+- AUTH_CHALLENGE <iv_size> <cipher_challenge_size>
+
+In addition the client send to server body messages concerning the following headers:
+- UPDATE and CREATE_FILE : the body messages contain file chunks  (the entire file is divided into one or more chuncks).
+- AUTH_CHALLENGE : the body message contains the iv and the cipher challenge.
+
+The client waits a server response which can be different depending to the situation.
+
+The possible responses are:
+- OK
+- INTERNAL_ERROR
+- OLD_VERSION
+- NOT_PRESENT
+- NON_AUTHENTICATED
+
+#### Server Side
+Server waits a message (header) from the client. Once received it, the server calls a specific method to execute the folder updating and then it sends to client a response.
+The possible responses are:
+- OK
+- INTERNAL_ERROR
+- OLD_VERSION
+- NOT_PRESENT
+- NON_AUTHENTICATED
