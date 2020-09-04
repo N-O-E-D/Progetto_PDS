@@ -17,7 +17,6 @@
  */
 Session::Session(TcpSocket t_socket,Server server): m_socket(std::move(t_socket)),m_server(server){
     isAuthenticated = false;
-    //self=shared_from_this();
 }
 
 /**
@@ -158,8 +157,6 @@ void Session::genChallenge(){
 
     log(TRACE,"La challenge generata è : ",m_challenge);
     sendToClient(CHALLENGE);
-    //readAsyncUntil();
-
 }
 /**
  * Session's method which parses the data (from stream) receved from client
@@ -342,76 +339,3 @@ void ServerSocket::doAccept()
                                 doAccept();
                             });
 }
-/*
-void log(logType lt,std::string const& message){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message;
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message;
-            break;
-    }
-#endif
-}
-void log(logType lt,std::string const& message, boost::asio::streambuf const& s){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message;
-            drawHeader(s);
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message;
-            drawHeader(s);
-            break;
-    }
-#endif
-}
-void log(logType lt,std::string const& message1,std::string const& message2){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message1;
-            drawStrToUnsChar(message2);
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message1;
-            drawStrToUnsChar(message2);
-            break;
-    }
-#endif
-}
-void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message1;
-            drawVectUnsChar(message2);
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message1;
-            drawVectUnsChar(message2);
-            break;
-    }
-#endif
-}
-void drawStrToUnsChar(std::string const& s){
-    for (int i=0;i<(int)s.size();i++)
-        printf("%02x",(unsigned char)s[i]);
-    printf("\n");
-}
-void drawHeader(boost::asio::streambuf const& s){
-    auto bufs=s.data();
-    std::cout<<"dimensione header : "<<s.size()<<std::endl;
-    std::cout<<"HEADER"<<std::endl;
-    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+s.size());
-    std::cout<<"FINE HEADER"<<std::endl;
-}
-void drawVectUnsChar(std::vector<unsigned char> const& v){
-    for (int i=0;i<(int)v.size();i++)
-        printf("%02x",v[i]);
-    printf("\n");
-}
-*/

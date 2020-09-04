@@ -231,32 +231,7 @@ void ClientSocket::setUsername(std::string const& username){
 }
 
 /**
- * ClientSocket's method which starts an asynchronous (non-blocking) connection
- */
-void ClientSocket::doConnect()
-{
-    log(TRACE,"Start connection with server...");
-    boost::asio::async_connect(m_socket, m_endpointIterator,
-                               [this](boost::system::error_code ec, TcpResolverIterator)
-                               {
-                                   if (!ec) {
-                                       //invio l'header
-                                       //log(TRACE,"Connesso. Invio header");
-                                       writeHeader(m_request);
-                                       //controllo anche se devo inviare il contenuto di un file
-                                       if(m_messageType==UPDATE || m_messageType==CREATE_FILE)
-                                           doReadFile();
-
-
-
-                                   } else log(ERROR,"Couldn't connect to host. Please run server "
-                                                    "or check network connection : "+ec.message());
-                               });
-
-}
-/**
  * ClientSocket's method which read a file content and then send the file to server
- * @param t_ec
  */
 void ClientSocket::doReadFile()
 {
@@ -273,7 +248,6 @@ void ClientSocket::doReadFile()
             //log(TRACE,"Il contenuto del chunk da inviare è :",std::string(m_buf.begin(),m_buf.end()));
             auto buf = boost::asio::buffer(m_buf.data(), static_cast<size_t>(m_sourceFile.gcount()));
             //log(TRACE,"Dimensione buffer : "+std::to_string(buf.size()));
-            //m_sourceFile.close();
             writeFileContent(buf);
         }
 
@@ -343,9 +317,7 @@ void ClientSocket::update(const std::string &path) {
     m_messageType=UPDATE;
     openFile(m_path);
     buildHeader(UPDATE);
-    //doConnect();
     writeHeader(m_request);
-    //doReadFile();
     waitResponse(UPDATE);
 }
 /**
@@ -364,7 +336,6 @@ void ClientSocket::updateName(const std::string &path,std::string const& newName
     m_messageType=UPDATE_NAME;
     m_newName=newName;
     buildHeader(UPDATE_NAME);
-    //doConnect();
     writeHeader(m_request);
     waitResponse(UPDATE_NAME);
 }
@@ -382,7 +353,6 @@ void ClientSocket::remove(const std::string &path) {
     m_path=path;
     m_messageType=REMOVE;
     buildHeader(REMOVE);
-    //doConnect();
     writeHeader(m_request);
     waitResponse(REMOVE);
 }
@@ -401,9 +371,7 @@ void ClientSocket::createFile(const std::string &path) {
     m_messageType=CREATE_FILE;
     openFile(m_path);
     buildHeader(CREATE_FILE);
-    //doConnect();
     writeHeader(m_request);
-    //doReadFile();
     waitResponse(CREATE_FILE);
 }
 /**
@@ -420,7 +388,6 @@ void ClientSocket::createDir(const std::string &path) {
     m_path=path;
     m_messageType=CREATE_DIR;
     buildHeader(CREATE_DIR);
-    //doConnect();
     writeHeader(m_request);
     waitResponse(CREATE_DIR);
 }
@@ -438,7 +405,6 @@ void ClientSocket::syncDir(std::string const& path){
     m_path=path;
     m_messageType=SYNC_DIR;
     buildHeader(SYNC_DIR);
-    //doConnect();
     writeHeader(m_request);
     waitResponse(SYNC_DIR);
 }
@@ -466,7 +432,6 @@ void ClientSocket::syncFile(std::string const& path){
     m_mdvalue=sName;
     //log(TRACE,"The digest (string) is:",m_mdvalue);
     buildHeader(SYNC_FILE);
-    //doConnect();
     writeHeader(m_request);
     waitResponse(SYNC_FILE);
 }
@@ -619,94 +584,6 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
 
 
 }
-/*
-void log(logType lt,std::string const& message){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message;
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message;
-            break;
-    }
-#elseif DEPLOY
-    switch(lt){
-        case ERROR:
-            std::cout<< "[ ERROR ] "+message<<"\r";
-            break;
-        case TRACE:
-            std::cout<< "[ OK ] "+message<<"\r";
-            break;
-    }
-#endif
-}
-void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message1;
-            drawVectUnsChar(message2);
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message1;
-            drawVectUnsChar(message2);
-            break;
-    }
-#endif
-}
-void log(logType lt,std::string const& message1,std::string const& message2){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message1;
-            drawStrToUnsChar(message2);
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message1;
-            drawStrToUnsChar(message2);
-            break;
-    }
-#endif
-}
-void log(logType lt,std::string const& message, boost::asio::streambuf const& s){
-#if DEBUG
-    switch(lt){
-        case ERROR:
-            BOOST_LOG_TRIVIAL(error) << message;
-            drawHeader(s);
-            break;
-        case TRACE:
-            BOOST_LOG_TRIVIAL(trace) << message;
-            drawHeader(s);
-            break;
-    }
-#endif
-}
-void drawVectUnsChar(std::vector<unsigned char> const& v){
-    for (int i=0;i<(int)v.size();i++)
-        printf("%02x",v[i]);
-    printf("\n");
-}
-void drawStrToUnsChar(std::string const& s){
-    for (int i=0;i<(int)s.size();i++)
-        printf("%02x",(unsigned char)s[i]);
-    printf("\n");
-}
-std::string vectUnsCharToStr(std::vector<unsigned char> const& v){
-    std::string result;
-    result.resize(v.size());
-    for(int i=0;i<(int)v.size();i++)
-        result[i]=(char) v[i];
-    return result;
-}
-void drawHeader(boost::asio::streambuf const& s){
-    auto bufs=s.data();
-    std::cout<<"dimensione header : "<<s.size()<<std::endl;
-    std::cout<<"HEADER"<<std::endl;
-    std::cout<<std::string(boost::asio::buffers_begin(bufs),boost::asio::buffers_begin(bufs)+s.size());
-    std::cout<<"FINE HEADER"<<std::endl;
-}*/
 responseType stringToEnum(std::string const& s){
     std::unordered_map <std::string,responseType> table={{"OK",OK},{"WRONG_USERNAME",WRONG_USERNAME},{"WRONG_PASSWORD",WRONG_PASSWORD},
                                                          {"CONNECTION_ERROR",CONNECTION_ERROR},{"UNDEFINED",UNDEFINED},{"CHALLENGE",CHALLENGE},

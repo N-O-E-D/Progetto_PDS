@@ -21,6 +21,8 @@ std::vector<unsigned char> genRandomBytes(int bytes);
 std::vector<unsigned char> encrypt(std::string& message,std::vector<unsigned char> iv,std::vector<unsigned char> key);
 std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,std::vector<unsigned char> iv,std::vector<unsigned char> key);
 void handleErrors(void);
+
+
 enum logType{
     ERROR,TRACE
 };

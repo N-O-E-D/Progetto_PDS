@@ -13,17 +13,21 @@
 #define DEBUG 0
 #define DEPLOY 1
 
+/**
+ * Function which handles the OpenSSL errors
+ */
 void handleErrors(void)
 {
     ERR_print_errors_fp(stderr);
     abort();
 }
-
+/**
+ * Function which computes the hash of a string
+ */
 unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
     EVP_MD_CTX *md;
-    //unsigned char md_value[EVP_MAX_MD_SIZE];
 
-    int n,i;
+    int n;
     unsigned int md_len;
     unsigned char buf[BUF_SIZE];
     FILE *fin;
@@ -43,20 +47,21 @@ unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
         log(ERROR,"Digest computation problem");
         exit(1);
     }
-    /*printf("The digest is: ");
-    for(i = 0; i < md_len; i++)
-        printf("%02x", md_value[i]);
-    printf("\n");*/
     log(TRACE,"The digest is: ",std::string(md_value,md_value+md_len));
     EVP_MD_CTX_free(md);
     return md_len;
 }
-
+/**
+ * Function which permits to compare two hashes
+ */
 bool compareHash(unsigned char md_value1[],unsigned char md_value2[], int md_len){
     if(CRYPTO_memcmp(md_value1,md_value2, md_len)!=0)
         return false;
     return true;
 }
+/**
+ * Funchion which generates a strong key from password and salt
+ */
 std::vector<unsigned char> HKDF(std::string const& password,std::vector<unsigned char> const& salt){
     EVP_PKEY_CTX *pctx;
     unsigned char out[KEYLEN]; //la chiave deve avere lunghezza 32 bytes (poi uso aes-256)
@@ -66,27 +71,22 @@ std::vector<unsigned char> HKDF(std::string const& password,std::vector<unsigned
     result.resize(KEYLEN);
     if (EVP_PKEY_derive_init(pctx) <= 0)
         log(ERROR,"Error during EVP_PKEY_derive_init");
-        if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256()) <= 0)
-            log(ERROR,"Error during EVP_PKEY_derive_init");
-            if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) <= 0)
-                log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_salt");
-                if (EVP_PKEY_CTX_set1_hkdf_key(pctx, password.data(), password.size()) <= 0)
-                    log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_key");
-                    if (EVP_PKEY_derive(pctx, out, &outlen) <= 0)
-                            log(ERROR,"Error during EVP_PKEY_derive");
+    if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256()) <= 0)
+        log(ERROR,"Error during EVP_PKEY_derive_init");
+    if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) <= 0)
+        log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_salt");
+    if (EVP_PKEY_CTX_set1_hkdf_key(pctx, password.data(), password.size()) <= 0)
+        log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_key");
+    if (EVP_PKEY_derive(pctx, out, &outlen) <= 0)
+        log(ERROR,"Error during EVP_PKEY_derive");
 
-    /*printf("La chiave è :\n");
-    for (int i=0;i<KEYLEN;i++)
-        result[i]=out[i];
-    for (int i=0;i<KEYLEN;i++)
-        printf("%02x",result[i]);
-    printf("\n");*/
     log(TRACE,"La chiave è : ",result);
     return result;
 }
-
+/**
+ * Function which generates a sequence of random bytes
+ */
 std::vector<unsigned char> genRandomBytes(int bytes){
-    int i;
     unsigned char random_string[MAX_BUF];
     std::vector<unsigned char> result;
     result.resize(bytes);
@@ -102,7 +102,9 @@ std::vector<unsigned char> genRandomBytes(int bytes){
 
     return result;
 }
-
+/**
+ * Function which encypts a message beginning from key and iv
+ */
 std::vector<unsigned char> encrypt(std::string & message,std::vector<unsigned char> iv, std::vector<unsigned char> key){
 
     EVP_CIPHER_CTX *ctx;
@@ -114,7 +116,7 @@ std::vector<unsigned char> encrypt(std::string & message,std::vector<unsigned ch
     std::vector<unsigned char> result;
     std::string padding;
     padding.resize(28);
-    for (int i=0;i<padding.size();i++)
+    for (int i=0;i<(int)padding.size();i++)
         padding[i]=0;
     message+=padding;
     /* Create and initialise the context */
@@ -147,16 +149,15 @@ std::vector<unsigned char> encrypt(std::string & message,std::vector<unsigned ch
 
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
-    //printf("the ciphertext is:\n");
     result.resize(ciphertext_len);
     for (int i=0;i<ciphertext_len;i++)
         result[i]=ciphertext[i];
-    /*for (int i=0;i<result.size();i++)
-        printf("%02x",result[i]);
-    printf("\n");*/
     log(TRACE,"The ciphertext is : ",result);
     return result;
 }
+/**
+ * Function which decrpyts a message beginning from key and iv
+ */
 std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,std::vector<unsigned char> iv,std::vector<unsigned char> key){
     EVP_CIPHER_CTX *ctx;
 
@@ -201,9 +202,6 @@ std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,
     for (int i=0;i<plaintext_len-28;i++)
         result[i]=plaintext[i];
     log(TRACE,"the plaintext is : ",result);
-    /*for (int i=0;i<result.size();i++)
-        printf("%02x",result[i]);
-    printf("\n");*/
     return result;
 }
 
