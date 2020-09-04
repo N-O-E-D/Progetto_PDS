@@ -15,7 +15,7 @@
 #include <boost/iterator.hpp>
 #include <boost/cstdint.hpp>
 
-void handleSocket(int portnum){
+void handleSocket(const int& portnum){
     try {
         boost::asio::io_service ioService;
         Server server;
@@ -35,6 +35,18 @@ int main(int argc, char** argv)
         return -1;
     }
     auto port = std::string(argv[1]);
+    int portnum;
+    try{
+        portnum = stoi(port);
+    }
+    catch(const std::invalid_argument& ia){
+        std::cerr<<"Invalid port argument: "<<ia.what()<<std::endl;
+        return -1;
+    }
+    catch(const std::out_of_range& oor){
+        std::cerr<<"Out of range port argument: "<<oor.what()<<std::endl;
+        return -1;
+    }
 
     //Carica le credenziali in memoria
     const std::string filename("../credenziali.txt");
@@ -44,7 +56,7 @@ int main(int argc, char** argv)
     //Setta la working directory del server
     boost::filesystem::current_path(workingdirectory);
 
-    handleSocket(stoi(port));
+    handleSocket(portnum);
 
     return 0;
 }
