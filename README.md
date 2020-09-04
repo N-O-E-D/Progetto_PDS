@@ -44,13 +44,13 @@ where Folder_To_Track is a path.
   
   - Backup directory
   
-    /server/backup contains the backup foldsers for each user
+    /server/backup contains the backup folders for each user
     
   - Launch
   ```
   cd Progetto_PDS
   cd server
-  ./server
+  ./server <Port>
   ```
 ## Description
 ### Communication API
