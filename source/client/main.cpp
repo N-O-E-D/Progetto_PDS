@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
                     // 5.1.1 If already synced return
                     if (path.second == SyncStatus::Synced) return;
                     // 5.1.2 If not synced, do it
-                    log(CLIENT,TRACE,"Trying to sync : "+ path.first);
+                    log(CLIENT,WAIT,"Trying to sync : "+ path.first);
                     if (std::filesystem::is_directory(std::filesystem::path(path.first)))
                         socket.syncDir(path.first);
                     else
@@ -141,25 +141,25 @@ int main(int argc, char** argv) {
                 // 5.2.1 Send the corresponding message and update map
                 switch(path.second) {
                     case Status::FileCreated:
-                        log(CLIENT,TRACE, "File created: " + path.first);
+                        log(CLIENT,WAIT, "File created: " + path.first);
                         socket.createFile(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.setSynced(path.first);
                         break;
                     case Status::FileModified:
-                        log(CLIENT,TRACE, "File modified: " + path.first);
+                        log(CLIENT,WAIT, "File modified: " + path.first);
                         socket.update(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.setSynced(path.first);
                         break;
                     case Status::Erased:
-                        log(CLIENT,TRACE, "File or Directory erased: " + path.first);
+                        log(CLIENT,WAIT, "File or Directory erased: " + path.first);
                         socket.remove(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.remove(path.first);
                         break;
                     case Status::DirCreated:
-                        log(CLIENT,TRACE, "Directory created: " + path.first);
+                        log(CLIENT,WAIT, "Directory created: " + path.first);
                         socket.createDir(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.setSynced(path.first);

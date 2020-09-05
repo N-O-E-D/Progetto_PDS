@@ -220,6 +220,7 @@ void ClientSocket::openFile(std::string const& t_path)
  * @param cost
  */
 void ClientSocket::setPassword(std::string const& password){
+    log(API_CLIENT,TRACE,"Setto la password a : "+password);
     m_password=password;
 }
 /**
@@ -227,6 +228,7 @@ void ClientSocket::setPassword(std::string const& password){
  * @param username
  */
 void ClientSocket::setUsername(std::string const& username){
+    log(API_CLIENT,TRACE,"Setto username a : "+username);
     m_username=username;
 }
 
@@ -505,6 +507,16 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
     switch(rt){
         case OK:
             log(API_CLIENT,TRACE,"Server ha risposto con OK , tutto è andato a buon fine");
+            if(m_messageType==UPDATE_NAME)
+                log(CLIENT,TRACE,"Update name successfully");
+            if(m_messageType==REMOVE)
+                log(CLIENT,TRACE,"Remove "+m_path+" successfully");
+            if(m_messageType==CREATE_DIR)
+                log(CLIENT,TRACE,"Create directory "+m_path+" successfully");
+            if(m_messageType==SYNC_FILE)
+                log(CLIENT,TRACE,"File correctly synchronized");
+            if(m_messageType==SYNC_DIR)
+                log(CLIENT,TRACE,"Directory correctly synchronized");
             if (m_messageType==CREATE_FILE || m_messageType==UPDATE) {
                 log(API_CLIENT,TRACE,"I chunks inviati sono : "+std::to_string(m_sendChunks));
                 if (m_sendChunks < m_chunks) {
@@ -513,20 +525,20 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
                         waitResponse(mt);
                     }
                     else {
-                        log(API_CLIENT,TRACE,"File sent successfully!");
+                        log(CLIENT,TRACE,"File sent successfully!");
                         m_sendChunks = 0;
                         m_sourceFile.close();
                     }
                 }
                 else {
-                    log(API_CLIENT,TRACE,"File sent successfully!");
+                    log(CLIENT,TRACE,"File sent successfully!");
                     m_sendChunks = 0;
                     m_sourceFile.close();
                 }
             }
             break;
             case INTERNAL_ERROR: //ritento
-            log(API_CLIENT,ERROR,"Server ha risposto con internal error. Qualcosa è andato storto , ritento");
+            log(CLIENT,ERROR,"Ops, server internal error, something went wrong. I'll try again...");
             if(m_attempts>=MAX_ATTEMPTS){
                 m_attempts=0;
                 return;
@@ -559,7 +571,7 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
             }
             break;
         case NOT_PRESENT:
-            log(API_CLIENT,TRACE,"Server ha risposto con not present");
+            log(CLIENT,TRACE,m_path+" not present. Synchronizing...");
             if(mt==SYNC_FILE)
                 createFile(m_path);
             if(mt==SYNC_DIR)
@@ -570,11 +582,11 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
                 createFile(m_path);
             break;
         case OLD_VERSION:
-            log(API_CLIENT,TRACE,"Server ha risposto con old version");
+            log(CLIENT,TRACE,m_path+" old version. Synchronizing");
             update(m_path);
             break;
         case NON_AUTHENTICATED:
-            log(API_CLIENT,TRACE,"Server ha risposto con non authenticated.");
+            log(CLIENT,TRACE,"Ops. NON_AUTHENTICATED");
             break;
         default:
             break;

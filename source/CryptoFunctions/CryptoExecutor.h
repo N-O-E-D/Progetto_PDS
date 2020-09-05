@@ -24,7 +24,7 @@ void handleErrors(void);
 
 
 enum logType{
-    ERROR,TRACE
+    ERROR,TRACE,WAIT
 };
 enum side {
     CLIENT,SERVER,CRYPTO,API_CLIENT,API_SERVER

@@ -79,7 +79,8 @@ std::vector<unsigned char> HKDF(std::string const& password,std::vector<unsigned
         log(CRYPTO,ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_key");
     if (EVP_PKEY_derive(pctx, out, &outlen) <= 0)
         log(CRYPTO,ERROR,"Error during EVP_PKEY_derive");
-
+    for (int i=0;i<(int)outlen;i++)
+        result[i]=out[i];
     log(CRYPTO,TRACE,"La chiave è : ",result);
     return result;
 }
@@ -99,7 +100,7 @@ std::vector<unsigned char> genRandomBytes(int bytes){
 
     for (int i=0;i<bytes;i++)
         result[i]=random_string[i];
-
+    log(CRYPTO,TRACE,"La sequenza random generata è : ",result);
     return result;
 }
 /**
@@ -214,6 +215,9 @@ void log(side s,logType lt,std::string const& message){
             case TRACE:
                 BOOST_LOG_TRIVIAL(trace) << message;
                 break;
+            case WAIT:
+                BOOST_LOG_TRIVIAL(trace) << message;
+                break;
         }
         return;
     }
@@ -225,6 +229,9 @@ void log(side s,logType lt,std::string const& message){
         case TRACE:
             BOOST_LOG_TRIVIAL(trace) << message;
             break;
+            case WAIT:
+                BOOST_LOG_TRIVIAL(trace) << message;
+                break;
     }
 #elif DEPLOY
     if(s==API_CLIENT || s==CRYPTO)
@@ -236,6 +243,8 @@ void log(side s,logType lt,std::string const& message){
         case TRACE:
             std::cout<<  "[ OK ] "+message<<std::endl;
             break;
+        case WAIT:
+            std::cout<< "[ ... ] "+message<<std::endl;
     }
 #endif
 }
@@ -250,6 +259,9 @@ void log(side s,logType lt,std::string const& message1,std::vector<unsigned char
                 BOOST_LOG_TRIVIAL(trace) << message1;
                 drawVectUnsChar(message2);
                 break;
+                case WAIT:
+                BOOST_LOG_TRIVIAL(trace) << message1;
+                break;
         }
         return;
     }
@@ -263,6 +275,10 @@ void log(side s,logType lt,std::string const& message1,std::vector<unsigned char
             BOOST_LOG_TRIVIAL(trace) << message1;
             drawVectUnsChar(message2);
             break;
+            case WAIT:
+                BOOST_LOG_TRIVIAL(trace) << message1;
+                drawVectUnsChar(message2);
+                break;
     }
 #endif
 }
@@ -277,6 +293,10 @@ void log(side s,logType lt,std::string const& message1,std::string const& messag
                 BOOST_LOG_TRIVIAL(trace) << message1;
                 drawStrToUnsChar(message2);
                 break;
+            case WAIT:
+                BOOST_LOG_TRIVIAL(trace) <<message1;
+                drawStrToUnsChar(message2);
+                break;
         }
         return;
     }
@@ -287,6 +307,10 @@ void log(side s,logType lt,std::string const& message1,std::string const& messag
             drawStrToUnsChar(message2);
             break;
         case TRACE:
+            BOOST_LOG_TRIVIAL(trace) << message1;
+            drawStrToUnsChar(message2);
+            break;
+            case WAIT:
             BOOST_LOG_TRIVIAL(trace) << message1;
             drawStrToUnsChar(message2);
             break;
@@ -304,6 +328,10 @@ void log(side s,logType lt,std::string const& message, boost::asio::streambuf co
                 BOOST_LOG_TRIVIAL(trace) << message;
                 drawHeader(b);
                 break;
+            case WAIT:
+                BOOST_LOG_TRIVIAL(trace) << message;
+                drawHeader(b);
+                break;
         }
     }
 #if DEBUG
@@ -314,6 +342,10 @@ void log(side s,logType lt,std::string const& message, boost::asio::streambuf co
             break;
         case TRACE:
             BOOST_LOG_TRIVIAL(trace) << message;
+            drawHeader(b);
+            break;
+        case WAIT:
+            BOOST_LOG_TRIVIAL(trace);
             drawHeader(b);
             break;
     }
