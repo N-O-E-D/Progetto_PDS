@@ -73,7 +73,7 @@ where Folder_To_Track is a path.
 * If there are any exceptions, they are caught: some has dedicated handlers, others the general one.
 
 
-### Communication API
+### Communication Protocol
 #### Client Side
 Client builds a specific header to notify the server about the modifications detected by FileSystemWatcher.
 
