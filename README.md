@@ -73,6 +73,13 @@ where Folder_To_Track is a path.
 * If there are any exceptions, they are caught: some has dedicated handlers, others the general one.
 
 
+### Server
+#### ARCHITECTURE
+* It receives by argument the port on which the server will start listening
+* It performs asynchronous operations, such as accept, read and write operations on the socket
+* It supports multi-client
+
+
 ### Communication Protocol
 #### Client Side
 Client builds a specific header to notify the server about the modifications detected by FileSystemWatcher.
