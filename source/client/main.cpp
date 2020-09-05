@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
                     // 5.1.1 If already synced return
                     if (path.second == SyncStatus::Synced) return;
                     // 5.1.2 If not synced, do it
-                    log(TRACE,"Trying to sync : "+ path.first);
+                    log(CLIENT,TRACE,"Trying to sync : "+ path.first);
                     if (std::filesystem::is_directory(std::filesystem::path(path.first)))
                         socket.syncDir(path.first);
                     else
@@ -141,25 +141,25 @@ int main(int argc, char** argv) {
                 // 5.2.1 Send the corresponding message and update map
                 switch(path.second) {
                     case Status::FileCreated:
-                        log(TRACE, "File created: " + path.first);
+                        log(CLIENT,TRACE, "File created: " + path.first);
                         socket.createFile(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.setSynced(path.first);
                         break;
                     case Status::FileModified:
-                        log(TRACE, "File modified: " + path.first);
+                        log(CLIENT,TRACE, "File modified: " + path.first);
                         socket.update(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.setSynced(path.first);
                         break;
                     case Status::Erased:
-                        log(TRACE, "File or Directory erased: " + path.first);
+                        log(CLIENT,TRACE, "File or Directory erased: " + path.first);
                         socket.remove(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.remove(path.first);
                         break;
                     case Status::DirCreated:
-                        log(TRACE, "Directory created: " + path.first);
+                        log(CLIENT,TRACE, "Directory created: " + path.first);
                         socket.createDir(path.first);
                         runHandlers(ioService);
                         pathSyncStatus.setSynced(path.first);
@@ -172,13 +172,14 @@ int main(int argc, char** argv) {
         catch (WrongUsernameException& e){
             if(attempts++ < MAX_ATTEMPTS){
                 // retry
-                std::cout << "Invalid username. " << MAX_ATTEMPTS-attempts+1 << " attempts remaining.\nPlease re-insert username: ";
+                //std::cout << "Invalid username. " << MAX_ATTEMPTS-attempts+1 << " attempts remaining.\nPlease re-insert username: ";
+                log(CLIENT,ERROR,"Invalid username. "+std::to_string(MAX_ATTEMPTS-attempts+1)+ " attempts remaining. Please re-insert username");
                 std::cin >> username;
                 socket.setUsername(username);
             } else {
                 // stop
                 fw.stop();
-                log(ERROR,"Wrong username. No attempts remaining. Terminating program");
+                log(CLIENT,ERROR,"Wrong username. No attempts remaining. Terminating program");
                 t1.join();
                 exit(201); // 201 => Wrong username
             }
@@ -187,13 +188,14 @@ int main(int argc, char** argv) {
         catch(WrongPasswordException& e){
             if(attempts++ < MAX_ATTEMPTS){
                 // retry
-                std::cout << "Invalid password. " << MAX_ATTEMPTS-attempts+1 << " attempts remaining.\nPlease re-insert password: ";
+                //std::cout << "Invalid password. " << MAX_ATTEMPTS-attempts+1 << " attempts remaining.\nPlease re-insert password: ";
+                log(CLIENT,ERROR,"Invalid password. "+std::to_string(MAX_ATTEMPTS-attempts+1)+ " attempts remaining. Please re-insert password");
                 std::cin >> password;
                 socket.setPassword(password);
             } else {
                 // stop
                 fw.stop();
-                log(ERROR,"Wrong password. No attempts remaining. Terminating program");
+                log(CLIENT,ERROR,"Wrong password. No attempts remaining. Terminating program");
                 t1.join();
                 exit(202); // 202 => Wrong password
             }
@@ -202,7 +204,7 @@ int main(int argc, char** argv) {
         catch (std::exception& e){
             // stop
             fw.stop();
-            log(ERROR, e.what());
+            log(CLIENT,ERROR, e.what());
             t1.join();
             exit(200); // 200 => generic error
         }

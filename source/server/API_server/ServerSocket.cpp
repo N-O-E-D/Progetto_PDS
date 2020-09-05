@@ -46,9 +46,9 @@ void Session::readAsyncSome(int dim,functionType ft){
     self = shared_from_this();
     m_buf.clear();
     m_buf.resize(dim);
-    log(TRACE,"Dimensione buffer : "+std::to_string(m_buf.size()));
+    log(API_SERVER,TRACE,"Dimensione buffer : "+std::to_string(m_buf.size()));
     if(ft==READ_FILE)
-        log(TRACE,"Sto leggendo il "+std::to_string(m_receivedChunks+1)+" chunk");
+        log(API_SERVER,TRACE,"Sto leggendo il "+std::to_string(m_receivedChunks+1)+" chunk");
     m_socket.async_read_some(boost::asio::buffer(m_buf.data(), m_buf.size()),
                              [this/*, self*/,ft](boost::system::error_code ec, size_t bytes) {
                                  if (!ec)
@@ -61,7 +61,7 @@ void Session::readAsyncSome(int dim,functionType ft){
                                          parseAndDecryptCryptoChallenge();
                                          break;
                                  }
-                                 else log(ERROR,"Errore nella async read some : "+ec.message());
+                                 else log(API_SERVER,ERROR,"Errore nella async read some : "+ec.message());
                              });
 }
 
@@ -72,19 +72,19 @@ void Session::readAsyncSome(int dim,functionType ft){
 void Session::processRead(size_t t_bytesTransferred)
 {
 
-    log(TRACE,"Bytes transferred :("+std::to_string(t_bytesTransferred)+"),in avail = "+std::to_string(m_requestBuf_.in_avail())+", size = "+std::to_string(m_requestBuf_.size())
+    log(API_SERVER,TRACE,"Bytes transferred :("+std::to_string(t_bytesTransferred)+"),in avail = "+std::to_string(m_requestBuf_.in_avail())+", size = "+std::to_string(m_requestBuf_.size())
                             +", max_size = "+std::to_string(m_requestBuf_.max_size())+".");
 
-    log(TRACE,"Ho ricevuto questo header:",m_requestBuf_);
+    log(API_SERVER,TRACE,"Ho ricevuto questo header:",m_requestBuf_);
     std::istream requestStream(&m_requestBuf_);
     readData(requestStream);
     if(!isAuthenticated && (m_messageType!= "AUTH" && m_messageType!="AUTH_CHALLENGE")){
-        log(ERROR,"UTENTE NON AUTENTICATO");
+        log(API_SERVER,ERROR,"UTENTE NON AUTENTICATO");
         sendToClient(NON_AUTHENTICATED);
     }
 
     else if (m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
-        log(TRACE,"Sto leggendo il contenuto del file...");
+        log(API_SERVER,TRACE,"Sto leggendo il contenuto del file...");
         sendToClient(OK);
         readAsyncSome(computeDimChunk(),READ_FILE);
     }
@@ -95,7 +95,7 @@ void Session::processRead(size_t t_bytesTransferred)
         else sendToClient(WRONG_USERNAME);
     }
     else if(m_messageType=="AUTH_CHALLENGE"){
-        log(TRACE,"Sto leggendo l'iv e la challenge cifrata...");
+        log(API_SERVER,TRACE,"Sto leggendo l'iv e la challenge cifrata...");
         sendToClient(OK);
         readAsyncSome(m_iv.size()+m_cryptoChallenge.size(),DECRYPT_CRYPTO_CHALLENGE);
     }
@@ -114,7 +114,7 @@ int Session::computeDimChunk(){
  */
 void Session::parseAndDecryptCryptoChallenge(){
 
-    log(TRACE,"Ho ricevuto iv+challenge : ",std::string(m_buf.begin(),m_buf.end()));
+    log(API_SERVER,TRACE,"Ho ricevuto iv+challenge : ",std::string(m_buf.begin(),m_buf.end()));
     std::vector<unsigned char> iv_vect;
     std::vector<unsigned char> cc_vect;
     cc_vect.resize(m_cryptoChallenge.size());
@@ -124,24 +124,24 @@ void Session::parseAndDecryptCryptoChallenge(){
     for (int i=m_iv.size();i<(int)(m_iv.size()+m_cryptoChallenge.size());i++)
         cc_vect[i-m_iv.size()]=(unsigned char) m_buf[i];
 
-    log(TRACE,"Ho letto iv: ",iv_vect);
-    log(TRACE,"Ho letto la sfida cifrata: ",cc_vect);
+    log(API_SERVER,TRACE,"Ho letto iv: ",iv_vect);
+    log(API_SERVER,TRACE,"Ho letto la sfida cifrata: ",cc_vect);
     std::string password;
     if (m_server.UserToPassword(m_username,password)==WRONG_USERNAME){
         sendToClient(WRONG_USERNAME);
         return;
     }
     std::vector<unsigned char> key=HKDF(password, iv_vect);
-    log(TRACE,"Lunghezza chiave : "+std::to_string(key.size()));
+    log(API_SERVER,TRACE,"Lunghezza chiave : "+std::to_string(key.size()));
     std::vector<unsigned char> dec_challenge=decrypt(cc_vect,iv_vect,key);
     if(CRYPTO_memcmp((unsigned char*)m_challenge.data(),dec_challenge.data(),LENGTHCHALLENGE)==0) {
-        log(TRACE,"AUTENTICAZIONE RIUSCITA");
+        log(API_SERVER,TRACE,"AUTENTICAZIONE RIUSCITA");
         isAuthenticated=true;
         sendToClient(OK);
         readAsyncUntil();
     }
     else {
-        log(TRACE,"AUTENTICAZIONE FALLITA");
+        log(API_SERVER,TRACE,"AUTENTICAZIONE FALLITA");
         sendToClient(WRONG_PASSWORD);
     }
 }
@@ -155,7 +155,7 @@ void Session::genChallenge(){
     for (int i=0;i<(int)challenge.size();i++)
         m_challenge[i]=(char)challenge[i];
 
-    log(TRACE,"La challenge generata è : ",m_challenge);
+    log(API_SERVER,TRACE,"La challenge generata è : ",m_challenge);
     sendToClient(CHALLENGE);
 }
 /**
@@ -166,35 +166,35 @@ void Session::readData(std::istream &stream)
 {
     stream >> m_messageType;
     stream >> m_pathName;
-    log(TRACE,"Message type ricevuto : "+ m_messageType);
+    log(API_SERVER,TRACE,"Message type ricevuto : "+ m_messageType);
     if(m_messageType=="AUTH"){
         m_username=m_pathName;
-        log(TRACE,"User che cerca di autenticarsi : "+ m_username);
+        log(API_SERVER,TRACE,"User che cerca di autenticarsi : "+ m_username);
     }
     if(m_messageType=="AUTH_CHALLENGE"){
         m_iv.resize(std::stoi(m_pathName));
         stream>>m_pathName;
         m_cryptoChallenge.resize(std::stoi(m_pathName));
-        log(TRACE,"Lunghezza iv: "+std::to_string(m_iv.size()));
-        log(TRACE,"Lunghezza challenge cifrata: "+std::to_string(m_cryptoChallenge.size()));
+        log(API_SERVER,TRACE,"Lunghezza iv: "+std::to_string(m_iv.size()));
+        log(API_SERVER,TRACE,"Lunghezza challenge cifrata: "+std::to_string(m_cryptoChallenge.size()));
     }
     if(m_messageType=="UPDATE_NAME") {
         stream >> m_newName;
-        log(TRACE,"Nuovo nome : "+m_newName);
+        log(API_SERVER,TRACE,"Nuovo nome : "+m_newName);
     }
     if(m_messageType=="UPDATE" || m_messageType=="CREATE_FILE") {
         stream >> m_fileSize;
-        log(TRACE,"Lunghezza file : "+std::to_string(m_fileSize));
+        log(API_SERVER,TRACE,"Lunghezza file : "+std::to_string(m_fileSize));
         m_chunks=((int)m_fileSize)/DIM_CHUNK +1;
         m_receivedChunks=0;
-        log(TRACE,"Il numero dei chunks da leggere è pari a : "+std::to_string(m_chunks));
+        log(API_SERVER,TRACE,"Il numero dei chunks da leggere è pari a : "+std::to_string(m_chunks));
     }
     if (m_messageType=="SYNC_FILE") {
         stream >> m_mdvalue;
-        log(TRACE, "Il message digest ricevuto è : ",m_mdvalue);
+        log(API_SERVER,TRACE, "Il message digest ricevuto è : ",m_mdvalue);
     }
     if(m_messageType=="SYNC_DIR"){
-        log(TRACE,"Il path della cartella da sincronizzare è :"+m_pathName);
+        log(API_SERVER,TRACE,"Il path della cartella da sincronizzare è :"+m_pathName);
     }
 
 }
@@ -205,10 +205,10 @@ void Session::readData(std::istream &stream)
 void Session::doReadFileContent(size_t t_bytesTransferred)
 {
     if (t_bytesTransferred > 0) {
-        log(TRACE,"Bytes ricevuti "+std::to_string(t_bytesTransferred));
+        log(API_SERVER,TRACE,"Bytes ricevuti "+std::to_string(t_bytesTransferred));
        m_file.insert(m_file.end(),m_buf.begin(),m_buf.end());
     }
-    log(TRACE,"Ho ricevuto questo chunk : "+std::string(m_file.begin(),m_file.end()));
+    log(API_SERVER,TRACE,"Ho ricevuto questo chunk : "+std::string(m_file.begin(),m_file.end()));
     manageMessage(m_messageType);
 
 }
@@ -217,7 +217,7 @@ void Session::doReadFileContent(size_t t_bytesTransferred)
  * @param messageType
  */
 void Session::manageMessage(std::string const& messageType){
-    log(TRACE,"Richiamo metodi del server ("+messageType+")...");
+    log(API_SERVER,TRACE,"Richiamo metodi del server ("+messageType+")...");
     responseType rt;
     m_server.setUserDirectory(m_username);
     //ora che ho tutti i dati ricevuti dal client richiamo le funzioni fornite dalla classe Server a seconda dell'azione
@@ -276,19 +276,19 @@ void Session::sendToClient(responseType rt){
             responseStream << "NON_AUTHENTICATED"<<"\n\n";
             break;
         default:
-            log(TRACE,"nessun header");
+            log(API_SERVER,TRACE,"nessun header");
             return;
 
     }
-    log(TRACE,"L'header da inviare al client è:",m_response);
+    log(API_SERVER,TRACE,"L'header da inviare al client è:",m_response);
     boost::asio::async_write(m_socket,
                               m_response,
                              [this,rt](boost::system::error_code ec, size_t )
                              {
 
-                                log(TRACE,"Messaggio di risposta inviato.");
+                                log(API_SERVER,TRACE,"Messaggio di risposta inviato.");
                                 if((rt==OLD_VERSION || rt==NOT_PRESENT) ){
-                                    log(TRACE,"Aspetto che il client mi invii il file...");
+                                    log(API_SERVER,TRACE,"Aspetto che il client mi invii il file...");
                                     readAsyncUntil();
                                 }
                                 if(rt==CHALLENGE)
@@ -317,7 +317,7 @@ ServerSocket::ServerSocket(IoService& t_ioService, short t_port, Server& server)
           m_acceptor(t_ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), t_port)),
           m_server(server)
 {
-    log(TRACE,"Server started...");
+    log(API_SERVER,TRACE,"Server started...");
 
     doAccept();
 }
@@ -327,12 +327,12 @@ ServerSocket::ServerSocket(IoService& t_ioService, short t_port, Server& server)
  */
 void ServerSocket::doAccept()
 {
-    log(TRACE,"Server in ascolto...");
+    log(API_SERVER,TRACE,"Server in ascolto...");
     m_acceptor.async_accept(m_socket,
                             [this](boost::system::error_code ec)
                             {
                                 if (!ec) {
-                                    log(TRACE,"Comunicazione accettata.");
+                                    log(API_SERVER,TRACE,"Comunicazione accettata.");
                                     std::make_shared<Session>(std::move(m_socket), std::move(m_server))->start();
                                 }
 

@@ -33,7 +33,7 @@ unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
     FILE *fin;
 
     if((fin = fopen(path.data(),"r")) == NULL) {
-        log(ERROR,"Couldnt open input file, try again");
+        log(CRYPTO,ERROR,"Couldnt open input file, try again");
         exit(1);
     }
 
@@ -44,10 +44,10 @@ unsigned int computeHash(const std::string &path,unsigned char md_value[]) {
         EVP_DigestUpdate(md, buf,n);
 
     if(EVP_DigestFinal_ex(md, md_value, &md_len) != 1) {
-        log(ERROR,"Digest computation problem");
+        log(CRYPTO,ERROR,"Digest computation problem");
         exit(1);
     }
-    log(TRACE,"The digest is: ",std::string(md_value,md_value+md_len));
+    log(CRYPTO,TRACE,"The digest is: ",std::string(md_value,md_value+md_len));
     EVP_MD_CTX_free(md);
     return md_len;
 }
@@ -70,17 +70,17 @@ std::vector<unsigned char> HKDF(std::string const& password,std::vector<unsigned
     std::vector<unsigned char> result;
     result.resize(KEYLEN);
     if (EVP_PKEY_derive_init(pctx) <= 0)
-        log(ERROR,"Error during EVP_PKEY_derive_init");
+        log(CRYPTO,ERROR,"Error during EVP_PKEY_derive_init");
     if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256()) <= 0)
-        log(ERROR,"Error during EVP_PKEY_derive_init");
+        log(CRYPTO,ERROR,"Error during EVP_PKEY_derive_init");
     if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) <= 0)
-        log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_salt");
+        log(CRYPTO,ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_salt");
     if (EVP_PKEY_CTX_set1_hkdf_key(pctx, password.data(), password.size()) <= 0)
-        log(ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_key");
+        log(CRYPTO,ERROR,"Error during EVP_PKEY_CTX_set1_hkdf_key");
     if (EVP_PKEY_derive(pctx, out, &outlen) <= 0)
-        log(ERROR,"Error during EVP_PKEY_derive");
+        log(CRYPTO,ERROR,"Error during EVP_PKEY_derive");
 
-    log(TRACE,"La chiave è : ",result);
+    log(CRYPTO,TRACE,"La chiave è : ",result);
     return result;
 }
 /**
@@ -91,7 +91,7 @@ std::vector<unsigned char> genRandomBytes(int bytes){
     std::vector<unsigned char> result;
     result.resize(bytes);
     if(bytes>MAX_BUF){
-        log(ERROR,"Maximum size allowed execed. Set to "+std::to_string(MAX_BUF));
+        log(CRYPTO,ERROR,"Maximum size allowed execed. Set to "+std::to_string(MAX_BUF));
         bytes=MAX_BUF;
     }
 
@@ -152,7 +152,7 @@ std::vector<unsigned char> encrypt(std::string & message,std::vector<unsigned ch
     result.resize(ciphertext_len);
     for (int i=0;i<ciphertext_len;i++)
         result[i]=ciphertext[i];
-    log(TRACE,"The ciphertext is : ",result);
+    log(CRYPTO,TRACE,"The ciphertext is : ",result);
     return result;
 }
 /**
@@ -201,11 +201,22 @@ std::vector<unsigned char> decrypt(std::vector<unsigned char> const& ciphertext,
     result.resize(plaintext_len-28);
     for (int i=0;i<plaintext_len-28;i++)
         result[i]=plaintext[i];
-    log(TRACE,"the plaintext is : ",result);
+    log(CRYPTO,TRACE,"the plaintext is : ",result);
     return result;
 }
 
-void log(logType lt,std::string const& message){
+void log(side s,logType lt,std::string const& message){
+    if(s==SERVER || s==API_SERVER){
+        switch(lt){
+            case ERROR:
+                BOOST_LOG_TRIVIAL(error) << message;
+                break;
+            case TRACE:
+                BOOST_LOG_TRIVIAL(trace) << message;
+                break;
+        }
+        return;
+    }
 #if DEBUG
     switch(lt){
         case ERROR:
@@ -216,6 +227,8 @@ void log(logType lt,std::string const& message){
             break;
     }
 #elif DEPLOY
+    if(s==API_CLIENT || s==CRYPTO)
+        return;
     switch(lt){
         case ERROR:
             std::cout<< "[ ERROR ] "+message<<std::endl;
@@ -226,7 +239,20 @@ void log(logType lt,std::string const& message){
     }
 #endif
 }
-void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2){
+void log(side s,logType lt,std::string const& message1,std::vector<unsigned char> const& message2){
+    if(s==SERVER || s==API_SERVER){
+        switch(lt){
+            case ERROR:
+                BOOST_LOG_TRIVIAL(error) << message1;
+                drawVectUnsChar(message2);
+                break;
+            case TRACE:
+                BOOST_LOG_TRIVIAL(trace) << message1;
+                drawVectUnsChar(message2);
+                break;
+        }
+        return;
+    }
 #if DEBUG
     switch(lt){
         case ERROR:
@@ -240,7 +266,20 @@ void log(logType lt,std::string const& message1,std::vector<unsigned char> const
     }
 #endif
 }
-void log(logType lt,std::string const& message1,std::string const& message2){
+void log(side s,logType lt,std::string const& message1,std::string const& message2){
+    if(s==SERVER || s==API_SERVER){
+        switch(lt){
+            case ERROR:
+                BOOST_LOG_TRIVIAL(error) << message1;
+                drawStrToUnsChar(message2);
+                break;
+            case TRACE:
+                BOOST_LOG_TRIVIAL(trace) << message1;
+                drawStrToUnsChar(message2);
+                break;
+        }
+        return;
+    }
 #if DEBUG
     switch(lt){
         case ERROR:
@@ -254,16 +293,28 @@ void log(logType lt,std::string const& message1,std::string const& message2){
     }
 #endif
 }
-void log(logType lt,std::string const& message, boost::asio::streambuf const& s){
+void log(side s,logType lt,std::string const& message, boost::asio::streambuf const& b){
+    if(s==SERVER || s==API_SERVER){
+        switch(lt){
+            case ERROR:
+                BOOST_LOG_TRIVIAL(error) << message;
+                drawHeader(b);
+                break;
+            case TRACE:
+                BOOST_LOG_TRIVIAL(trace) << message;
+                drawHeader(b);
+                break;
+        }
+    }
 #if DEBUG
     switch(lt){
         case ERROR:
             BOOST_LOG_TRIVIAL(error) << message;
-            drawHeader(s);
+            drawHeader(b);
             break;
         case TRACE:
             BOOST_LOG_TRIVIAL(trace) << message;
-            drawHeader(s);
+            drawHeader(b);
             break;
     }
 #endif

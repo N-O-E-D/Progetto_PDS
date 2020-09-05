@@ -26,10 +26,13 @@ void handleErrors(void);
 enum logType{
     ERROR,TRACE
 };
-void log(logType lt,std::string const& message);
-void log(logType lt,std::string const& message1,std::vector<unsigned char> const& message2);
-void log(logType lt,std::string const& message1,std::string const& message2);
-void log(logType lt,std::string const& message,boost::asio::streambuf const& s);
+enum side {
+    CLIENT,SERVER,CRYPTO,API_CLIENT,API_SERVER
+};
+void log(side s,logType lt,std::string const& message);
+void log(side s,logType lt,std::string const& message1,std::vector<unsigned char> const& message2);
+void log(side s,logType lt,std::string const& message1,std::string const& message2);
+void log(side s,logType lt,std::string const& message,boost::asio::streambuf const& b);
 void drawVectUnsChar(std::vector<unsigned char> const& v);
 void drawStrToUnsChar(std::string const& s);
 void drawHeader(boost::asio::streambuf const& s);

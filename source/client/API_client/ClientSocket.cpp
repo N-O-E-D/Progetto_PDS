@@ -30,32 +30,32 @@ responseType ClientSocket::authenticate(){
     buildHeader(AUTH);
     responseType rt;
 
-    //log(TRACE,"Start connection with server...");
+    log(API_CLIENT,TRACE,"Start connection with server...");
 
     rt=doConnectSync();
     if(rt==CONNECTION_ERROR)
         return rt;
 
-    //log(TRACE,"Connessione accettata.");
-    //log(TRACE,"Sto inviando l'header");
+    log(API_CLIENT,TRACE,"Connessione accettata.");
+    log(API_CLIENT,TRACE,"Sto inviando l'header");
 
     rt=writeSync(m_request);
     if(rt==CONNECTION_ERROR)
         return rt;
 
-    //log(TRACE,"Header inviato.\nAspetto la sfida");
+    log(API_CLIENT,TRACE,"Header inviato.\nAspetto la sfida");
 
     rt=waitChallenge();
     if(rt==CONNECTION_ERROR || rt==WRONG_USERNAME)
         return rt;
 
-    //log(TRACE,"Sfida ricevuta.\nGenero la sfida cifrata e la invio...");
+    log(API_CLIENT,TRACE,"Sfida ricevuta.\nGenero la sfida cifrata e la invio...");
 
     rt=genCryptoChallenge();
     if(rt==CONNECTION_ERROR)
         return rt;
 
-    //log(TRACE,"Sfida cifrata inviata.\nIn attesa dell'esito dell'autenticazione...");
+    log(API_CLIENT,TRACE,"Sfida cifrata inviata.\nIn attesa dell'esito dell'autenticazione...");
 
     rt=readUntilSync();
     if(rt==CONNECTION_ERROR)
@@ -74,7 +74,7 @@ responseType ClientSocket::writeSync(Buffer& t_buffer){
     boost::system::error_code error;
     boost::asio::write(m_socket,t_buffer,error);
     if(error) {
-        log(ERROR,"Connection error during writeSync");
+        log(API_CLIENT,ERROR,"Connection error during writeSync");
         return CONNECTION_ERROR;
     }
     return OK;
@@ -90,7 +90,7 @@ responseType ClientSocket::readUntilSync(){
     m_response.consume(m_response.size());
     read_until(m_socket, m_response, "\n\n",error);
     if (error) {
-        log(ERROR,"Connection error during waitChallenge");
+        log(API_CLIENT,ERROR,"Connection error during waitChallenge");
         return CONNECTION_ERROR;
     }
     else return OK;
@@ -103,7 +103,7 @@ responseType ClientSocket::doConnectSync() {
     boost::system::error_code error;
     boost::asio::connect(m_socket, m_endpointIterator, error);
     if (error) {
-        log(ERROR,"Connection error during doConnectSync");
+        log(API_CLIENT,ERROR,"Connection error during doConnectSync");
         return CONNECTION_ERROR;
     }
     return OK;
@@ -119,7 +119,7 @@ responseType ClientSocket::waitChallenge() {
         return rt;
     rt=processResponseSync();
     if(rt==WRONG_USERNAME) {
-        log(ERROR,"Wrong username!");
+        log(API_CLIENT,ERROR,"Wrong username!");
         return rt;
     }
     return OK;
@@ -131,7 +131,7 @@ responseType ClientSocket::waitChallenge() {
 responseType ClientSocket::genCryptoChallenge(){
 
     std::string message(m_buf.begin(),m_buf.end());
-    //log(TRACE,"La challenge ricevuta è:",message);
+    log(API_CLIENT,TRACE,"La challenge ricevuta è:",message);
 
     // iv generation
     std::vector<unsigned char> iv=genRandomBytes(16);
@@ -152,7 +152,7 @@ responseType ClientSocket::genCryptoChallenge(){
     std::vector<unsigned char> ss;
     ss.insert(ss.end(),iv.begin(),iv.end());
     ss.insert(ss.end(),cipherChallenge.begin(),cipherChallenge.end());
-    //log(TRACE,"Invio: ",ss);
+    log(API_CLIENT,TRACE,"Invio: ",ss);
     auto buf = boost::asio::buffer(ss.data(), m_iv.size()+m_cryptoChallenge.size());
     return writeSync(buf);
 }
@@ -161,23 +161,23 @@ responseType ClientSocket::genCryptoChallenge(){
  * @return responseType object
  */
 responseType ClientSocket::processResponseSync(){
-    //log(TRACE,"Ho ricevuto questo header:",m_response);
+    log(API_CLIENT,TRACE,"Ho ricevuto questo header:",m_response);
     std::istream responseStream(&m_response);
     responseStream >> m_responseType;
-    //log(TRACE,"Ho letto : "+m_responseType);
+    log(API_CLIENT,TRACE,"Ho letto : "+m_responseType);
     responseType rt= stringToEnum(m_responseType);
     switch(rt){
         case OK:
-            //log(TRACE,"OK autenticato");
+            log(API_CLIENT,TRACE,"OK autenticato");
             return OK;
         case WRONG_USERNAME:
-            //log(ERROR,"Username errato!");
+            log(API_CLIENT,ERROR,"Username errato!");
             return WRONG_USERNAME;
         case WRONG_PASSWORD:
-            //log(ERROR,"Password errata!");
+            log(API_CLIENT,ERROR,"Password errata!");
             return WRONG_PASSWORD;
         case CHALLENGE:
-            //log(TRACE,"Username corretto. Leggo la sfida...");
+            log(API_CLIENT,TRACE,"Username corretto. Leggo la sfida...");
             m_buf.clear();
             m_buf.resize(1);
             responseStream.read(m_buf.data(),1);
@@ -186,10 +186,10 @@ responseType ClientSocket::processResponseSync(){
             responseStream.read(m_buf.data(),LENGTHCHALLENGE);
             return OK;
         case UNDEFINED :
-            //log(ERROR,"Undefined header!");
+            log(API_CLIENT,ERROR,"Undefined header!");
             return CONNECTION_ERROR;
         case CONNECTION_ERROR:
-            //log(ERROR,"Connection Error!");
+            log(API_CLIENT,ERROR,"Connection Error!");
             return CONNECTION_ERROR;
         default:
             return CONNECTION_ERROR;
@@ -206,13 +206,13 @@ void ClientSocket::openFile(std::string const& t_path)
     m_sourceFile.open(t_path, std::ios_base::binary);
     if (m_sourceFile.fail())
         throw std::fstream::failure("Failed while opening file " + t_path);
-    //else log(TRACE,t_path+" aperto");
+    else log(API_CLIENT,TRACE,t_path+" aperto");
     m_sourceFile.seekg(0, m_sourceFile.end);
     m_fileSize = m_sourceFile.tellg();
     m_sourceFile.seekg(0, m_sourceFile.beg);
     m_chunks = m_fileSize/DIM_CHUNK + 1;
     m_sendChunks=0;
-    //log(TRACE,"Il numero di chuncks è : "+std::to_string(m_chunks));
+    log(API_CLIENT,TRACE,"Il numero di chuncks è : "+std::to_string(m_chunks));
 
 }
 /**
@@ -240,7 +240,7 @@ void ClientSocket::doReadFile()
             m_buf.resize(computeDimChunk());
             m_sourceFile.read(m_buf.data(), m_buf.size());
             if (m_sourceFile.fail() && !m_sourceFile.eof()) {
-                log(ERROR,"Failed while reading file");
+                log(API_CLIENT,ERROR,"Failed while reading file");
                 throw std::fstream::failure("Failed while reading file");
             }
             
@@ -299,7 +299,7 @@ void ClientSocket::buildHeader(messageType mt){
             return;
             break;
     }
-    //log(TRACE,"L'header costruito è:",m_request);
+    log(API_CLIENT,TRACE,"L'header costruito è:",m_request);
 
     }
 /**
@@ -423,14 +423,12 @@ void ClientSocket::syncFile(std::string const& path){
     m_messageType=SYNC_FILE;
     // Compute hash
     unsigned char md_value[EVP_MAX_MD_SIZE];
-    //log(TRACE,"Sync file");
     unsigned int md_len=computeHash(path, md_value);
 
     m_mdlen=md_len;
-    //log(TRACE,"The digest is:",std::vector<unsigned char>(md_value,md_value+md_len));
+    log(API_CLIENT,TRACE,"The digest is:",std::vector<unsigned char>(md_value,md_value+md_len));
     std::string sName(reinterpret_cast<char* >(md_value),(size_t) md_len);
     m_mdvalue=sName;
-    //log(TRACE,"The digest (string) is:",m_mdvalue);
     buildHeader(SYNC_FILE);
     writeHeader(m_request);
     waitResponse(SYNC_FILE);
@@ -446,7 +444,7 @@ void ClientSocket::writeHeader(Buffer& t_buffer) {
                              t_buffer,
                              [this](boost::system::error_code ec, size_t) {
                                  if(!ec) {
-                                     //log(TRACE,"Header inviato");
+                                     log(API_CLIENT,TRACE,"Header inviato");
 
                                  }
                              });
@@ -463,7 +461,7 @@ void ClientSocket::writeFileContent(Buffer& t_buffer)
                              t_buffer,
                              [this](boost::system::error_code ec, size_t )
                              {
-                                 //log(TRACE,"Chunck inviato");
+                                 log(API_CLIENT,TRACE,"Chunck inviato");
                                  m_sendChunks++;
 
                              });
@@ -481,7 +479,7 @@ void ClientSocket::waitResponse (messageType mt){
                          if (!ec)
                              processResponse(bytes,mt);
                          else
-                             log(ERROR,"errore in waitResponse");
+                             log(API_CLIENT,ERROR,"errore in waitResponse");
                      });
 }
 /**
@@ -502,33 +500,33 @@ void ClientSocket::processResponse(size_t t_bytesTransferred, messageType mt){
  * @param action
  */
 void ClientSocket::analyzeResponse(std::string response, messageType mt){
-    log(TRACE,response);
+    log(API_CLIENT,TRACE,response);
     responseType rt=stringToEnum(response);
     switch(rt){
         case OK:
-            //log(TRACE,"Server ha risposto con OK , tutto è andato a buon fine");
+            log(API_CLIENT,TRACE,"Server ha risposto con OK , tutto è andato a buon fine");
             if (m_messageType==CREATE_FILE || m_messageType==UPDATE) {
-                //log(TRACE,"I chunks inviati sono : "+std::to_string(m_sendChunks));
+                log(API_CLIENT,TRACE,"I chunks inviati sono : "+std::to_string(m_sendChunks));
                 if (m_sendChunks < m_chunks) {
                     if(m_fileSize!=0) {
                         doReadFile();
                         waitResponse(mt);
                     }
                     else {
-                        //log(TRACE,"Intero file inviato correttamente.");
+                        log(API_CLIENT,TRACE,"File sent successfully!");
                         m_sendChunks = 0;
                         m_sourceFile.close();
                     }
                 }
                 else {
-                    //log(TRACE,"Intero file inviato correttamente.");
+                    log(API_CLIENT,TRACE,"File sent successfully!");
                     m_sendChunks = 0;
                     m_sourceFile.close();
                 }
             }
             break;
             case INTERNAL_ERROR: //ritento
-            //log(ERROR,"Server ha risposto con internal error. Qualcosa è andato storto , ritento");
+            log(API_CLIENT,ERROR,"Server ha risposto con internal error. Qualcosa è andato storto , ritento");
             if(m_attempts>=MAX_ATTEMPTS){
                 m_attempts=0;
                 return;
@@ -561,7 +559,7 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
             }
             break;
         case NOT_PRESENT:
-            //log(TRACE,"Server ha risposto con not present");
+            log(API_CLIENT,TRACE,"Server ha risposto con not present");
             if(mt==SYNC_FILE)
                 createFile(m_path);
             if(mt==SYNC_DIR)
@@ -572,11 +570,11 @@ void ClientSocket::analyzeResponse(std::string response, messageType mt){
                 createFile(m_path);
             break;
         case OLD_VERSION:
-            //log(TRACE,"Server ha risposto con old version");
+            log(API_CLIENT,TRACE,"Server ha risposto con old version");
             update(m_path);
             break;
         case NON_AUTHENTICATED:
-            //log(TRACE,"Server ha risposto con non authenticated.");
+            log(API_CLIENT,TRACE,"Server ha risposto con non authenticated.");
             break;
         default:
             break;
